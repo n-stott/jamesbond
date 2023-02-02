@@ -3,10 +3,10 @@
 #include "players/random.h"
 #include "players/qlearner.h"
 #include "player.h"
+#include "fmt/core.h"
 #include <memory>
 #include <vector>
 #include <random>
-#include <fmt/core.h>
 
 void testA() {
     std::unique_ptr<Player> a = std::make_unique<RandomPlayer>(0);

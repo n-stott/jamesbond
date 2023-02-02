@@ -1,6 +1,6 @@
 #include "gamearena.h"
+#include "fmt/core.h"
 #include <string>
-#include <fmt/core.h>
 
 #define MAX_TURNS 100
 
