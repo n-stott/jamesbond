@@ -3,6 +3,7 @@
 
 #include "player.h"
 #include "rand.h"
+#include <algorithm>
 #include <vector>
 
 class QLearner : public Player {
@@ -32,6 +33,20 @@ private:
         std::vector<Score> qShoot;
 
         std::vector<Score>* qLookup[3];
+
+        std::vector<Score>& lookupAction(Action a) {
+            return *qLookup[(int)a];
+        }
+
+        void update(int beforeIndex, int afterIndex, Action a, double prize) {
+            static const double learningRate = 0.1;
+            static const double discountFactor = 0.1;
+            Score& updatee = lookupAction(a)[beforeIndex];
+            double estimates[3] = { lookupAction(Action::Reload)[afterIndex].score, lookupAction(Action::Shield)[afterIndex].score, lookupAction(Action::Shoot)[afterIndex].score };
+            double estimate = *std::max_element(estimates, estimates+3);
+            ++updatee.confidence;
+            updatee.score += learningRate * (prize + discountFactor * estimate - updatee.score);
+        }
 
         QState() {
             qReload.resize(216*216);

@@ -15,8 +15,10 @@ Player* GameArena::play(Player* a, Player* b, bool replayable) {
         Action actionB = b->nextAction(state_.stateB(), state_.stateA());
         state_.resolve(actionA, actionB);
     }
-    a->learnFromGame(state_);
-    b->learnFromGame(state_);
+    if(replayable) {
+        a->learnFromGame(state_);
+        b->learnFromGame(state_);
+    }
     return state_.winner();
 }
 
@@ -34,8 +36,8 @@ static std::string toString(const PlayerState& playerState) {
 }
 
 void GameArena::replay() const {
-    state_.replay([](const GameState& s, Action a, Action b) {
-        fmt::print("{}  A={}  B={}  {}\n", toString(s.stateA()), toString(a), toString(b), toString(s.stateB()));
+    state_.replay([](const GameStateSnapshot& s, const GameStateSnapshot&, Action a, Action b) {
+        fmt::print("{}  A={}  B={}  {}\n", toString(s.stateA), toString(a), toString(b), toString(s.stateB));
     });
     fmt::print("{}  A={}  B={}  {}\n", toString(state_.stateA()), "      ", "      ", toString(state_.stateB()));
 }

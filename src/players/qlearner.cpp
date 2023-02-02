@@ -23,7 +23,7 @@ Action QLearner::nextAction(const PlayerState& myState, const PlayerState& oppon
     }
     if(scoreShield.score < worstScore.score) worstScore = scoreShield;
     if(scoreShoot.score < worstScore.score) worstScore = scoreShoot;
-    if(bestScore.confidence < 5 || worstScore.confidence < 5 || std::abs(bestScore.score - worstScore.score) < 0.1) {
+    if(bestScore.confidence < 5 || worstScore.confidence < 5 || std::abs(bestScore.score - worstScore.score) < 1) {
         return myState.randomAllowedAction(&rand_);
     } else {
         return action;
@@ -34,19 +34,21 @@ void QLearner::learnFromGame(const GameState& state) {
     Player* winner = state.winner();
     double prize = 0.0;
     if(winner == this) {
-        prize = 0.5;
+        prize = 10;
     } else if (winner == nullptr) {
-        prize = -0.1;
+        prize = -1;
     } else {
-        prize = -0.5;
+        prize = -10;
     }
-    state.replay([&](const GameState& s, Action a, Action b) {
-        if(s.playerA() == this) {
-            int index = QState::configToIndex(s.stateA(), s.stateB());
-            (state_.qLookup[(int)a])->operator[](index).add(prize);
+    state.replay([&](const GameStateSnapshot& before, const GameStateSnapshot& after, Action a, Action b) {
+        if(state.playerA() == this) {
+            int beforeIndex = QState::configToIndex(before.stateA, before.stateB);
+            int afterIndex = QState::configToIndex(after.stateA, after.stateB);
+            state_.update(beforeIndex, afterIndex, a, prize);
         } else {
-            int index = QState::configToIndex(s.stateB(), s.stateA());
-            (state_.qLookup[(int)b])->operator[](index).add(prize);
+            int beforeIndex = QState::configToIndex(before.stateB, before.stateA);
+            int afterIndex = QState::configToIndex(after.stateB, after.stateA);
+            state_.update(beforeIndex, afterIndex, b, prize);
         }
     });
 }

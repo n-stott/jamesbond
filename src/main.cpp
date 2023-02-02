@@ -28,6 +28,6 @@ int main() {
     }
     fmt::print("\n");
 
-    Tourney::Result Q0vsQ1 = Tourney::run(10000, q0.get(), q1.get());
+    Tourney::Result Q0vsQ1 = Tourney::run(10000, q0.get(), q1.get(), false);
     fmt::print("QLearn0 vs QLearn1: ties={} winsA={} winsB={}\n\n", Q0vsQ1.ties, Q0vsQ1.winsA, Q0vsQ1.winsB);
 }

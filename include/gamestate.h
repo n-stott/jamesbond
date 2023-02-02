@@ -70,6 +70,11 @@ private:
     int remainingShields_;
 };
 
+struct GameStateSnapshot {
+    PlayerState stateA;
+    PlayerState stateB;
+};
+
 class GameState {
 public:
     GameState(Player* a, Player* b, bool replayable = false) : playerA_(a), playerB_(b), replayable_(replayable) { }
@@ -85,6 +90,10 @@ public:
         }
         stateA_.resolve(actionA, actionB);
         stateB_.resolve(actionB, actionA);
+    }
+
+    GameStateSnapshot snap() const {
+        return GameStateSnapshot{stateA(), stateB()};
     }
 
     Player* winner() const {
@@ -103,8 +112,10 @@ public:
             Action actionA = actionsA_[turn];
             Action actionB = actionsB_[turn];
             ++turn;
-            callback(replayState, actionA, actionB);
+            GameStateSnapshot before = replayState.snap();
             replayState.resolve(actionA, actionB);
+            GameStateSnapshot after = replayState.snap();
+            callback(before, after, actionA, actionB);
         }
     }
 
