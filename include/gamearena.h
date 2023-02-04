@@ -2,15 +2,16 @@
 #define GAMEARENA_H
 
 #include "player.h"
+#include "gamestate.h"
 
 class GameArena {
 public:
     GameArena();
     virtual ~GameArena() = default;
     
-    Player* play(Player* a, Player* b, bool replayable);
+    const Player* play(Player* a, Player* b, GameRecording* recording);
 
-    void replay() const;
+    void replay(const GameRecording& recording) const;
 
 protected:
     GameState state_;

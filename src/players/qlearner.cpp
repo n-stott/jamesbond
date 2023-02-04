@@ -30,8 +30,8 @@ Action QLearner::nextAction(const PlayerState& myState, const PlayerState& oppon
     }
 }
 
-void QLearner::learnFromGame(const GameState& state) {
-    Player* winner = state.winner();
+void QLearner::learnFromGame(const GameRecording& recording) {
+    const Player* winner = recording.winner();
     double prize = 0.0;
     if(winner == this) {
         prize = 10;
@@ -40,8 +40,8 @@ void QLearner::learnFromGame(const GameState& state) {
     } else {
         prize = -10;
     }
-    state.replay([&](const GameStateSnapshot& before, const GameStateSnapshot& after, Action a, Action b) {
-        if(state.playerA() == this) {
+    recording.replay([&](const GameStateSnapshot& before, const GameStateSnapshot& after, Action a, Action b) {
+        if(recording.playerA() == this) {
             int beforeIndex = QState::configToIndex(before.stateA, before.stateB);
             int afterIndex = QState::configToIndex(after.stateA, after.stateB);
             state_.update(beforeIndex, afterIndex, a, prize);

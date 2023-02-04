@@ -7,7 +7,7 @@ class Player {
 public:
     virtual ~Player() = default;
     virtual Action nextAction(const PlayerState& myState, const PlayerState& opponentState) = 0;
-    virtual void learnFromGame(const GameState& gameState) = 0;
+    virtual void learnFromGame(const GameRecording& recording) = 0;
 
 };
 

@@ -12,7 +12,7 @@ public:
         return myState.randomAllowedAction(&rand);
     }
 
-    void learnFromGame(const GameState&) override { }
+    void learnFromGame(const GameRecording&) override { }
 
 private:
     mutable Rand rand;

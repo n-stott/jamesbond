@@ -77,17 +77,13 @@ struct GameStateSnapshot {
 
 class GameState {
 public:
-    GameState(Player* a, Player* b, bool replayable = false) : playerA_(a), playerB_(b), replayable_(replayable) { }
+    GameState(const Player* a, const Player* b) : playerA_(a), playerB_(b) { }
 
     bool gameOver() const {
         return stateA_.lives() <= 0 || stateB_.lives() <= 0;
     }
 
     void resolve(Action actionA, Action actionB) {
-        if(replayable_) {
-            actionsA_.push_back(actionA);
-            actionsB_.push_back(actionB);
-        }
         stateA_.resolve(actionA, actionB);
         stateB_.resolve(actionB, actionA);
     }
@@ -96,19 +92,51 @@ public:
         return GameStateSnapshot{stateA(), stateB()};
     }
 
-    Player* winner() const {
+    const Player* winner() const {
         if(!gameOver()) return nullptr;
         if(stateA_.lives() > 0) return playerA_;
         if(stateB_.lives() > 0) return playerB_;
         return nullptr;
     }
 
+    const PlayerState& stateA() const { return stateA_; }
+    const PlayerState& stateB() const { return stateB_; }
+
+    const Player* playerA() const { return playerA_; }
+    const Player* playerB() const { return playerB_; }
+
+private:
+    const Player* playerA_;
+    const Player* playerB_;
+
+    PlayerState stateA_;
+    PlayerState stateB_;
+
+};
+
+class GameRecording {
+public:
+    GameRecording(const Player* a, const Player* b) : a_(a), b_(b), winner_(nullptr) { }
+
+    void clear() {
+        actionsA_.clear();
+        actionsB_.clear();
+    }
+
+    void record(Action a, Action b) {
+        actionsA_.push_back(a);
+        actionsB_.push_back(b);
+    }
+
+    void recordWinner(const Player* winner) {
+        winner_ = winner;
+    }
+
     template<typename Callback>
     void replay(Callback&& callback) const {
-        if(!replayable_) return;
-        GameState replayState(playerA_, playerB_);
+        GameState replayState(a_, b_);
         size_t turn = 0;
-        while(!replayState.gameOver()) {
+        while(!replayState.gameOver() && turn < actionsA_.size()) {
             Action actionA = actionsA_[turn];
             Action actionB = actionsB_[turn];
             ++turn;
@@ -119,23 +147,16 @@ public:
         }
     }
 
-    const PlayerState& stateA() const { return stateA_; }
-    const PlayerState& stateB() const { return stateB_; }
-
-    const Player* playerA() const { return playerA_; }
-    const Player* playerB() const { return playerB_; }
+    const Player* winner() const { return winner_; }
+    const Player* playerA() const { return a_; }
+    const Player* playerB() const { return b_; }
 
 private:
-    Player* playerA_;
-    Player* playerB_;
-
-    PlayerState stateA_;
-    PlayerState stateB_;
-
-    bool replayable_ = false;
+    const Player* a_;
+    const Player* b_;
+    const Player* winner_;
     std::vector<Action> actionsA_;
     std::vector<Action> actionsB_;
-
 };
 
 #endif

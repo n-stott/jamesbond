@@ -3,6 +3,7 @@
 
 #include "player.h"
 #include "rand.h"
+#include "fmt/core.h"
 #include <algorithm>
 #include <vector>
 
@@ -10,7 +11,16 @@ class QLearner : public Player {
 public:
     explicit QLearner(int seed = 0) : rand_(seed) { }
     Action nextAction(const PlayerState& myState, const PlayerState& opponentState);
-    void learnFromGame(const GameState& gameState);
+    void learnFromGame(const GameRecording& recording);
+
+    double confidence() const {
+        double c = 0;
+        size_t total = 0;
+        std::for_each(state_.qReload.begin(), state_.qReload.end(), [&](const QState::Score& s) { c += (s.confidence >= 5); ++ total; });
+        std::for_each(state_.qShield.begin(), state_.qShield.end(), [&](const QState::Score& s) { c += (s.confidence >= 5); ++ total; });
+        std::for_each(state_.qShoot.begin(), state_.qShoot.end(), [&](const QState::Score& s) { c += (s.confidence >= 5); ++ total; });
+        return 10*c/total;
+    }
 
 private:
     struct QState {
@@ -45,7 +55,8 @@ private:
             double estimates[3] = { lookupAction(Action::Reload)[afterIndex].score, lookupAction(Action::Shield)[afterIndex].score, lookupAction(Action::Shoot)[afterIndex].score };
             double estimate = *std::max_element(estimates, estimates+3);
             ++updatee.confidence;
-            updatee.score += learningRate * (prize + discountFactor * estimate - updatee.score);
+            double delta = learningRate * (prize + discountFactor * estimate - updatee.score);
+            updatee.score += delta;
         }
 
         QState() {
