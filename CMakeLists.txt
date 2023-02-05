@@ -12,3 +12,12 @@ add_executable(jamesbond
 target_compile_options(jamesbond PUBLIC -Wall -Wextra -Wpedantic -pedantic -Werror -DFMT_HEADER_ONLY)
 target_include_directories(jamesbond PUBLIC include)
 target_include_directories(jamesbond PUBLIC external)
+
+
+
+add_executable(reachability_analysis
+    src/reachability_analysis.cpp
+)
+target_compile_options(reachability_analysis PUBLIC -Wall -Wextra -Wpedantic -pedantic -Werror -DFMT_HEADER_ONLY)
+target_include_directories(reachability_analysis PUBLIC include)
+target_include_directories(reachability_analysis PUBLIC external)
