@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_executable(jamesbond
     src/players/qlearner.cpp
+    src/players/shapley.cpp
     src/gamearena.cpp
     src/gamestate.cpp
     src/main.cpp

@@ -2,6 +2,7 @@
 #include "gamearena.h"
 #include "players/random.h"
 #include "players/qlearner.h"
+#include "players/shapley.h"
 #include "player.h"
 #include "fmt/core.h"
 #include <memory>
@@ -91,7 +92,31 @@ void testB() {
     }
 }
 
+void testC() {
+    Shapley s;
+    RandomPlayer b(0);
+    auto q = createAndtrainQLearnerVsRandom(1);
+
+    Tourney::Params closed{false, false}; 
+    Tourney::Params open{true, true}; 
+
+    Tourney::Result SvsR = Tourney::run(10000, &s, &b, closed);
+    fmt::print("Shapley vs Random: ties={} winsA={} winsB={}\n\n", SvsR.ties, SvsR.winsA, SvsR.winsB);
+
+    Tourney::Result SvsQ = Tourney::run(10000, &s, q.get(), closed);
+    fmt::print("Shapley vs QLearner: ties={} winsA={} winsB={}\n\n", SvsQ.ties, SvsQ.winsA, SvsQ.winsB);
+
+    SvsQ = Tourney::run(1000000, &s, q.get(), open);
+    fmt::print("Shapley vs QLearner: ties={} winsA={} winsB={}\n\n", SvsQ.ties, SvsQ.winsA, SvsQ.winsB);
+
+    // GameArena arena;
+    // GameRecording rec(&b, &s);
+    // arena.play(&b, &s, &rec);
+    // arena.replay(rec);
+}
+
 int main() {
-    testA();
+    // testA();
     // testB();
+    testC();
 }
