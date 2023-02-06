@@ -35,30 +35,37 @@ public:
     int bullets() const { return bullets_; }
     int remainingShields() const { return remainingShields_; }
 
-    void resolve(Action myAction, Action opponentAction) {
-        if(myAction == Action::Reload) {
-            if(bullets_ >= MAX_BULLETS) {
-                lives_ = 0;
-            } else {
+    void die() { lives_ = 0; }
+
+    bool isLegalAction(Action a) const {
+        switch(a) {
+            case Action::Reload: return bullets_ < MAX_BULLETS;
+            case Action::Shield: return remainingShields_ > 0;
+            case Action::Shoot: return bullets_ > 0;
+        }
+    }
+
+    void resolveOwnAction(Action a) {
+        assert(isLegalAction(a));
+        switch(a) {
+            case Action::Reload: {
                 ++bullets_;
                 remainingShields_ = MAX_SHIELDS;
+                return;
             }
-        }
-        if(myAction == Action::Shield) {
-            if(remainingShields_ <= 0) {
-                lives_ = 0;
-            } else {
+            case Action::Shield: {
                 --remainingShields_;
+                return;
             }
-        }
-        if(myAction == Action::Shoot) {
-            if(bullets_ <= 0) {
-                lives_ = 0;
-            } else {
+            case Action::Shoot: {
                 --bullets_;
                 remainingShields_ = MAX_SHIELDS;
+                return;
             }
         }
+    }
+
+    void resolveOpponentAction(Action myAction, Action opponentAction) {
         if(opponentAction == Action::Shoot && myAction != Action::Shield) {
             lives_ = std::max(0, lives_-1);
         }
@@ -78,14 +85,20 @@ struct GameStateSnapshot {
 class GameState {
 public:
     GameState(const Player* a, const Player* b) : playerA_(a), playerB_(b) { }
+    virtual ~GameState() = default;
 
     bool gameOver() const {
         return stateA_.lives() <= 0 || stateB_.lives() <= 0;
     }
 
     void resolve(Action actionA, Action actionB) {
-        stateA_.resolve(actionA, actionB);
-        stateB_.resolve(actionB, actionA);
+        if(!stateA_.isLegalAction(actionA)) stateA_.die();
+        if(!stateB_.isLegalAction(actionB)) stateB_.die();
+        if(gameOver()) return;
+        stateA_.resolveOwnAction(actionA);
+        stateB_.resolveOwnAction(actionB);
+        stateA_.resolveOpponentAction(actionA, actionB);
+        stateB_.resolveOpponentAction(actionB, actionA);
     }
 
     GameStateSnapshot snap() const {

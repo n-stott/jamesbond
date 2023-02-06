@@ -47,9 +47,9 @@ void testA() {
     fmt::print("QLearn0 vs QLearn1: ties={} winsA={} winsB={}\n\n", Q0vsQ1.ties, Q0vsQ1.winsA, Q0vsQ1.winsB);
 }
 
-std::unique_ptr<Player> createAndtrainQLearnerVsRandom(int seed) {
+std::unique_ptr<QLearner> createAndtrainQLearnerVsRandom(int seed) {
     std::unique_ptr<Player> r = std::make_unique<RandomPlayer>(seed);
-    std::unique_ptr<Player> q = std::make_unique<QLearner>(seed);
+    std::unique_ptr<QLearner> q = std::make_unique<QLearner>(seed);
     Tourney::Params semiB{false, true};
     Tourney::run(100000, r.get(), q.get(), semiB);
     return q;
