@@ -106,9 +106,19 @@ public:
     }
 
     const Player* winner() const {
-        if(!gameOver()) return nullptr;
+        if(!gameOver()) return breakTie();
         if(stateA_.lives() > 0) return playerA_;
         if(stateB_.lives() > 0) return playerB_;
+        return nullptr;
+    }
+
+    const Player* breakTie() const {
+        if(stateA_.lives() > stateB_.lives()) return playerA_;
+        if(stateB_.lives() > stateA_.lives()) return playerB_;
+        if(stateA_.bullets() > stateB_.bullets()) return playerA_;
+        if(stateB_.bullets() > stateA_.bullets()) return playerB_;
+        if(stateA_.remainingShields() > stateB_.remainingShields()) return playerA_;
+        if(stateB_.remainingShields() > stateA_.remainingShields()) return playerB_;
         return nullptr;
     }
 
