@@ -22,6 +22,14 @@ public:
     PlayerState() : lives_(START_LIVES), bullets_(0), remainingShields_(MAX_SHIELDS) { }
     explicit PlayerState(int lives) : PlayerState() { lives_ = lives; }
 
+    static PlayerState from(int lives, int bullets, int remainingShields) {
+        PlayerState s;
+        s.lives_ = lives;
+        s.bullets_ = bullets;
+        s.remainingShields_ = remainingShields;
+        return s;
+    }
+
     Action randomAllowedAction(Rand* rand) const {
         std::array<Action, 3> availableActions;
         int nbAvailableActions = 0;
@@ -86,6 +94,13 @@ class GameState {
 public:
     GameState(const Player* a, const Player* b) : playerA_(a), playerB_(b) { }
     virtual ~GameState() = default;
+
+    static GameState from(const Player* a, const Player* b, const PlayerState& sa, const PlayerState& sb) {
+        GameState gs(a, b);
+        gs.stateA_ = sa;
+        gs.stateB_ = sb;
+        return gs;
+    }
 
     bool gameOver() const {
         return stateA_.lives() <= 0 || stateB_.lives() <= 0;
