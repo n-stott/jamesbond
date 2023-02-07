@@ -3,6 +3,7 @@
 #include "players/random.h"
 #include "players/qlearner.h"
 #include "players/shapley.h"
+#include "tourney.h"
 
 #include <memory>
 
@@ -23,9 +24,21 @@ extern "C" {
     JBPlayer* jb_createPlayer(JBPlayerType type, int seed) {
         std::unique_ptr<Player> p;
         switch(type) {
-            case JBPlayerType::RANDOM: p = std::make_unique<RandomPlayer>(seed); break;
-            case JBPlayerType::QLEARNER: p = std::make_unique<QLearner>(seed); break;
-            case JBPlayerType::SHAPLEY: p = std::make_unique<Shapley>(seed); break;
+            case JBPlayerType::RANDOM: {
+                p = std::make_unique<RandomPlayer>(seed);
+                break;
+            }
+            case JBPlayerType::QLEARNER: {
+                p = std::make_unique<QLearner>(seed);
+                RandomPlayer r(seed+1);
+                Tourney::Params semiB{false, true};
+                Tourney::run(100000, &r, p.get(), semiB);
+                break;
+            }
+            case JBPlayerType::SHAPLEY: {
+                p = std::make_unique<Shapley>(seed);
+                break;
+            }
             default: break;
         }
         if(!p) return nullptr;

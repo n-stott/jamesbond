@@ -329,7 +329,7 @@ static std::vector<StrategyPoint> approximateMeanPayoff(const GameGraph& g) {
             if(!std::isinf(vNext[i].value) && !std::isinf(v[i].value)) finiteMagn += std::abs(vNext[i].value - v[i].value);
         }
         double d = distance(v, vNext);
-        fmt::print("Iter #{:4}  DiffNz={} DiffInfNz={} diffMagn={} pureSolves={} |v-v+|={}\n", iter, diffSize, diffInf, finiteMagn, pureSolves, d);
+        // fmt::print("Iter #{:4}  DiffNz={} DiffInfNz={} diffMagn={} pureSolves={} |v-v+|={}\n", iter, diffSize, diffInf, finiteMagn, pureSolves, d);
         // if(diffSize == 0) break;
         // break;
         v.swap(vNext);
