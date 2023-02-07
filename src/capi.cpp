@@ -21,6 +21,23 @@ extern "C" {
         int remainingShields;
     };
 
+    struct JBRules {
+        JBRules(int startLives, int maxBullets, int maxShields) :startLives(startLives), maxBullets(maxBullets), maxShields(maxShields) { }
+        int startLives;
+        int maxBullets;
+        int maxShields;
+    };
+
+    JBRules* jb_createRules(int startLives, int maxBullets, int maxShields) {
+        std::unique_ptr<JBRules> rules = std::make_unique<JBRules>(startLives, maxBullets, maxShields);
+        return rules.release();
+    }
+
+    void jb_destroyRules(JBRules* rules) {
+        if(!rules) return;
+        delete rules;
+    }
+
     JBPlayer* jb_createPlayer(JBPlayerType type, int seed) {
         std::unique_ptr<Player> p;
         switch(type) {
@@ -61,28 +78,22 @@ extern "C" {
         delete state;
     }
 
-    int jb_lives(JBPlayerState* state) {
-        if(!state) return -1;
-        return state->lives;
+    JBError jb_lives(JBPlayerState* state, int* lives) {
+        if(!state) return JBError::INVALID_STATE;
+        *lives = state->lives;
+        return JBError::NONE;
     }
 
-    int jb_bullets(JBPlayerState* state) {
-        if(!state) return -1;
-        return state->bullets;
+    JBError jb_bullets(JBPlayerState* state, int* bullets) {
+        if(!state) return JBError::INVALID_STATE;
+        *bullets = state->bullets;
+        return JBError::NONE;
     }
     
-    int jb_remainingShields(JBPlayerState* state) {
-        if(!state) return -1;
-        return state->remainingShields;
-    }
-
-    static JBAction toJBAction(Action a) {
-        switch(a) {
-            case Action::Reload: return JBAction::RELOAD;
-            case Action::Shield: return JBAction::SHIELD;
-            case Action::Shoot: return JBAction::SHOOT;
-        }
-        return JBAction::SHOOT;
+    JBError jb_remainingShields(JBPlayerState* state, int* remainingShields) {
+        if(!state) return JBError::INVALID_STATE;
+        *remainingShields = state->remainingShields;
+        return JBError::NONE;
     }
 
     static Action fromJBAction(JBAction a) {
@@ -94,21 +105,36 @@ extern "C" {
         return Action::Shoot;
     }
 
-    JBAction jb_play(JBPlayer* player, JBPlayerState* ownState, JBPlayerState* opponentState) {
-        if(!player) return JBAction::SHOOT;
-        if(!ownState) return JBAction::SHOOT;
-        if(!opponentState) return JBAction::SHOOT;
+    static bool isStateValid(const JBPlayerState& state, const JBRules& rules) {
+        if(state.lives < 0 || state.lives > rules.startLives) return false;
+        if(state.bullets < 0 || state.bullets > rules.maxBullets) return false;
+        if(state.remainingShields < 0 || state.remainingShields > rules.maxShields) return false;
+        return true;
+    }
+
+    JBError jb_play(JBPlayer* player, JBPlayerState* ownState, JBPlayerState* opponentState, JBRules* rules, JBAction* action) {
+        if(!player) return JBError::INVALID_PLAYER;
+        if(!ownState) return JBError::INVALID_STATE;
+        if(!opponentState) return JBError::INVALID_STATE;
+        if(!rules) return JBError::INVALID_RULES;
+        if(!isStateValid(*ownState, *rules)) return JBError::INVALID_STATE;
+        if(!isStateValid(*opponentState, *rules)) return JBError::INVALID_STATE;
         PlayerState mine = PlayerState::from(ownState->lives, ownState->bullets, ownState->remainingShields);
         PlayerState theirs = PlayerState::from(opponentState->lives, opponentState->bullets, opponentState->remainingShields);
         Action a = player->playerHandle->nextAction(mine, theirs);
-        return toJBAction(a);
+        switch(a) {
+            case Action::Reload: *action = JBAction::RELOAD; return JBError::NONE;
+            case Action::Shield: *action = JBAction::SHIELD; return JBError::NONE;
+            case Action::Shoot: *action = JBAction::SHOOT; return JBError::NONE;
+        }
+        return JBError::INVALID_ACTION;
     }
 
-    int jb_applyActions(JBPlayer* playerA, JBPlayer* playerB, JBPlayerState* stateA, JBPlayerState* stateB, JBAction actionA, JBAction actionB) {
-        if(!playerA) return -1;
-        if(!playerB) return -1;
-        if(!stateA) return -1;
-        if(!stateB) return -1;
+    JBError jb_applyActions(JBPlayer* playerA, JBPlayer* playerB, JBPlayerState* stateA, JBPlayerState* stateB, JBAction actionA, JBAction actionB) {
+        if(!playerA) return JBError::INVALID_PLAYER;
+        if(!playerB) return JBError::INVALID_PLAYER;
+        if(!stateA) return JBError::INVALID_STATE;
+        if(!stateB) return JBError::INVALID_STATE;
         PlayerState sa = PlayerState::from(stateA->lives, stateA->bullets, stateA->remainingShields);
         PlayerState sb = PlayerState::from(stateB->lives, stateB->bullets, stateB->remainingShields);
         GameState gs = GameState::from(playerA->playerHandle.get(),
@@ -122,6 +148,6 @@ extern "C" {
         stateB->bullets = gs.stateB().bullets();
         stateA->remainingShields = gs.stateA().remainingShields();
         stateB->remainingShields = gs.stateB().remainingShields();
-        return 0;
+        return JBError::NONE;
     }
 }

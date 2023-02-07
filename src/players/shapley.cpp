@@ -286,7 +286,7 @@ static std::array<std::array<double, 3>, 3> formCostMatrix(const GameGraph& g, c
     fmt::print("{} {} {}\n", A[2][0], A[2][1], A[2][2]);
 }
 
-static inline double distance(const std::vector<StrategyPoint>& a, const std::vector<StrategyPoint>& b) {
+[[maybe_unused]] static inline double distance(const std::vector<StrategyPoint>& a, const std::vector<StrategyPoint>& b) {
     assert(a.size() == b.size());
     double d = 0;
     for(size_t i = 0; i < a.size(); ++i) {
@@ -328,7 +328,7 @@ static std::vector<StrategyPoint> approximateMeanPayoff(const GameGraph& g) {
             diffInf += (std::isinf(vNext[i].value) != std::isinf(v[i].value));
             if(!std::isinf(vNext[i].value) && !std::isinf(v[i].value)) finiteMagn += std::abs(vNext[i].value - v[i].value);
         }
-        double d = distance(v, vNext);
+        // double d = distance(v, vNext);
         // fmt::print("Iter #{:4}  DiffNz={} DiffInfNz={} diffMagn={} pureSolves={} |v-v+|={}\n", iter, diffSize, diffInf, finiteMagn, pureSolves, d);
         // if(diffSize == 0) break;
         // break;

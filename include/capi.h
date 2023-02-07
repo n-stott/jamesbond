@@ -3,6 +3,7 @@
 
 extern "C" {
 
+    struct JBRules;
     struct JBPlayer;
     struct JBPlayerState;
 
@@ -18,18 +19,30 @@ extern "C" {
         SHOOT,
     };
 
+    enum JBError : int {
+        NONE = 0,
+        INVALID_RULES = -1,
+        INVALID_PLAYER = -2,
+        INVALID_STATE = -3,
+        INVALID_ACTION = -4,
+    };
+
+    JBRules* jb_createRules(int startLives, int maxBullets, int maxShields);
+    void jb_destroyRules(JBRules* rules);
+
     JBPlayer* jb_createPlayer(JBPlayerType type, int seed);
     void jb_destroyPlayer(JBPlayer* player);
 
     JBPlayerState* jb_createState(int lives, int bullets, int remainingShields);
     void jb_destroyState(JBPlayerState* state);
 
-    int jb_lives(JBPlayerState* state);
-    int jb_bullets(JBPlayerState* state);
-    int jb_remainingShields(JBPlayerState* state);
+    JBError jb_lives(JBPlayerState* state, int* lives);
+    JBError jb_bullets(JBPlayerState* state, int* bullets);
+    JBError jb_remainingShields(JBPlayerState* state, int* remainingShields);
 
-    JBAction jb_play(JBPlayer* player, JBPlayerState* ownState, JBPlayerState* opponentState);
-    int jb_applyActions(JBPlayer* playerA, JBPlayer* playerB, JBPlayerState* stateA, JBPlayerState* stateB, JBAction actionA, JBAction actionB);
+    JBError jb_play(JBPlayer* player, JBPlayerState* ownState, JBPlayerState* opponentState, JBRules* rules, JBAction* action);
+
+    JBError jb_applyActions(JBPlayer* playerA, JBPlayer* playerB, JBPlayerState* stateA, JBPlayerState* stateB, JBAction actionA, JBAction actionB);
     
 
 }
