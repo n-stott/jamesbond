@@ -9,6 +9,9 @@
 #include <memory>
 
 class DummyPlayer : public Player {
+public:
+    explicit DummyPlayer(const Rules& rules) : Player(rules) { }
+private:
     Action nextAction(const PlayerState&, const PlayerState&) { return Action::Shoot; }
     void learnFromGame(const GameRecording&) { }
 };
@@ -18,6 +21,8 @@ static constexpr ssize_t BWIN = -2;
 static constexpr ssize_t TIE = -3;
 
 struct GameGraph {
+    explicit GameGraph(const Rules& rules) : a(rules), b(rules) { }
+
     DummyPlayer a;
     DummyPlayer b;
     std::vector<GameState> states;
@@ -85,7 +90,7 @@ static double gameStateValue(const GameState& s) {
 }
 
 static std::unique_ptr<GameGraph> make_graph(const Rules& rules) {
-    GameGraph graph;
+    GameGraph graph(rules);
 
     std::set<GameState, StateComparator> visitedStates;
     std::deque<GameState> stateQueue;
@@ -149,34 +154,6 @@ static std::unique_ptr<GameGraph> make_graph(const Rules& rules) {
         return {};
     }
     graph.entrypoint = std::distance(graph.states.begin(), entry);
-
-    // auto s = graph.states[0];
-    // const auto& sa = s.stateA();
-    // const auto& sb = s.stateB();
-    // auto t = s;
-    // t.resolve(Action::Shoot, Action::Reload);
-    // const auto& ta = t.stateA();
-    // const auto& tb = t.stateB();
-
-    // fmt::print("{} {}/{}/{}  {}/{}/{}\n", 0, sa.lives(), sa.bullets(), sa.remainingShields(), sb.lives(), sb.bullets(), sb.remainingShields());
-    // fmt::print("{} {}/{}/{}  {}/{}/{}\n", 0, ta.lives(), ta.bullets(), ta.remainingShields(), tb.lives(), tb.bullets(), tb.remainingShields());
-    // fmt::print("{} {} {} {}\n", t.gameOver(), t.winner() == &graph.a, t.winner() == &graph.b, !!t.winner());
-
-
-    // for(size_t i = 0; i < 10 ; ++i) { //graph.states.size(); ++i) {
-    //     const auto& sa = graph.states[i].stateA();
-    //     const auto& sb = graph.states[i].stateB();
-    //     fmt::print("{} {}/{}/{}  {}/{}/{}\n", i, sa.lives(), sa.bullets(), sa.remainingShields(), sb.lives(), sb.bullets(), sb.remainingShields());
-    //     fmt::print("   --({}, {}, {})-> {}\n", 0, 0, graph.edgesCost[i][0][0], graph.edges[i][0][0]);
-    //     fmt::print("   --({}, {}, {})-> {}\n", 0, 1, graph.edgesCost[i][0][1], graph.edges[i][0][1]);
-    //     fmt::print("   --({}, {}, {})-> {}\n", 0, 2, graph.edgesCost[i][0][2], graph.edges[i][0][2]);
-    //     fmt::print("   --({}, {}, {})-> {}\n", 1, 0, graph.edgesCost[i][1][0], graph.edges[i][1][0]);
-    //     fmt::print("   --({}, {}, {})-> {}\n", 1, 1, graph.edgesCost[i][1][1], graph.edges[i][1][1]);
-    //     fmt::print("   --({}, {}, {})-> {}\n", 1, 2, graph.edgesCost[i][1][2], graph.edges[i][1][2]);
-    //     fmt::print("   --({}, {}, {})-> {}\n", 2, 0, graph.edgesCost[i][2][0], graph.edges[i][2][0]);
-    //     fmt::print("   --({}, {}, {})-> {}\n", 2, 1, graph.edgesCost[i][2][1], graph.edges[i][2][1]);
-    //     fmt::print("   --({}, {}, {})-> {}\n", 2, 2, graph.edgesCost[i][2][2], graph.edges[i][2][2]);
-    // }
 
     return std::make_unique<GameGraph>(std::move(graph));
 }
@@ -393,7 +370,14 @@ static std::vector<StrategyPoint> approximateMeanPayoff(const GameGraph& g) {
     return v;
 }
 
-Shapley::Shapley(int seed) : rand_(seed) {
+std::unique_ptr<Shapley> Shapley::tryCreate(const Rules& rules, int seed) {
+    if(rules.startLives > 5) return {};
+    if(rules.maxBullets > 5) return {};
+    if(rules.maxShields > 5) return {};
+    return std::unique_ptr<Shapley>(new Shapley(rules, seed));
+}
+
+Shapley::Shapley(const Rules& rules, int seed) : Player(rules), rand_(seed) {
     gameGraph_ = make_graph(rules_);
     if(!gameGraph_) return;
     meanPayoff_ = approximateMeanPayoff(*gameGraph_);

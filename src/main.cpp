@@ -10,14 +10,17 @@
 #include <random>
 
 void testA() {
-    RandomPlayer a(0);
-    RandomPlayer b(1);
+    Rules rules;
+    RandomPlayer a(rules, 0);
+    RandomPlayer b(rules, 1);
     Tourney::Params closed{false, false}; 
     Tourney::Result AvsB = Tourney::run(10000, &a, &b, closed);
     fmt::print("Random vs Random: ties={} winsA={} winsB={}\n\n", AvsB.ties, AvsB.winsA, AvsB.winsB);
 
     Tourney::Params open{true, true};
-    QLearner q0(2);
+    auto q = QLearner::tryCreate(rules, 2);
+    assert(!!q);
+    QLearner q0 = *q;
     Tourney::Result AvsQ0;
     for(int i = 0; i < 10; ++i) { 
         AvsQ0 = Tourney::run(100000, &a, &q0, open);
@@ -26,7 +29,9 @@ void testA() {
     fmt::print("q0 confidence:{}%\n", q0.confidence());
     fmt::print("\n");
 
-    QLearner q1(3);
+    q = QLearner::tryCreate(rules, 3);
+    assert(!!q);
+    QLearner q1 = *q;
     Tourney::Result AvsQ1;
     for(int i = 0; i < 10; ++i) {
         AvsQ1 = Tourney::run(100000, &a, &q1, open);
@@ -48,20 +53,21 @@ void testA() {
     fmt::print("QLearn0 vs QLearn1: ties={} winsA={} winsB={}\n\n", Q0vsQ1.ties, Q0vsQ1.winsA, Q0vsQ1.winsB);
 }
 
-std::unique_ptr<QLearner> createAndtrainQLearnerVsRandom(int seed) {
-    std::unique_ptr<Player> r = std::make_unique<RandomPlayer>(seed);
-    std::unique_ptr<QLearner> q = std::make_unique<QLearner>(seed);
+std::unique_ptr<QLearner> createAndtrainQLearnerVsRandom(const Rules& rules, int seed) {
+    std::unique_ptr<Player> r = std::make_unique<RandomPlayer>(rules, seed);
+    std::unique_ptr<QLearner> q = QLearner::tryCreate(rules, seed);
     Tourney::Params semiB{false, true};
     Tourney::run(100000, r.get(), q.get(), semiB);
     return q;
 }
 
 void testB() {
+    Rules rules;
     std::vector<std::unique_ptr<Player>> players;
     const int bracketSize = 64;
     for(int i = 0; i < bracketSize; ++i) {
         fmt::print("Training #{}\n", i);
-        players.push_back(createAndtrainQLearnerVsRandom(i));
+        players.push_back(createAndtrainQLearnerVsRandom(rules, i));
     }
     std::vector<int> wins(bracketSize, 0);
     std::vector<int> ties(bracketSize, 0);
@@ -93,20 +99,22 @@ void testB() {
 }
 
 void testC() {
-    Shapley s;
-    RandomPlayer b(0);
-    auto q = createAndtrainQLearnerVsRandom(1);
+    Rules rules;
+    auto s = Shapley::tryCreate(rules);
+    assert(!!s);
+    RandomPlayer b(rules, 0);
+    auto q = createAndtrainQLearnerVsRandom(rules, 1);
 
     Tourney::Params closed{false, false}; 
     Tourney::Params open{true, true}; 
 
-    Tourney::Result SvsR = Tourney::run(10000, &s, &b, closed);
+    Tourney::Result SvsR = Tourney::run(10000, s.get(), &b, closed);
     fmt::print("Shapley vs Random: ties={} winsA={} winsB={}\n\n", SvsR.ties, SvsR.winsA, SvsR.winsB);
 
-    Tourney::Result SvsQ = Tourney::run(10000, &s, q.get(), closed);
+    Tourney::Result SvsQ = Tourney::run(10000, s.get(), q.get(), closed);
     fmt::print("Shapley vs QLearner: ties={} winsA={} winsB={}\n\n", SvsQ.ties, SvsQ.winsA, SvsQ.winsB);
 
-    SvsQ = Tourney::run(1000000, &s, q.get(), open);
+    SvsQ = Tourney::run(1000000, s.get(), q.get(), open);
     fmt::print("Shapley vs QLearner: ties={} winsA={} winsB={}\n\n", SvsQ.ties, SvsQ.winsA, SvsQ.winsB);
 
     // GameArena arena;

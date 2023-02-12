@@ -27,7 +27,7 @@ extern "C" {
         INVALID_ACTION = -4,
     };
 
-    JBRules* jb_createRules(int startLives, int maxBullets, int maxShields);
+    JBRules* jb_createRules(int startLives, int maxBullets, int maxShields, int maxTurns);
     void jb_destroyRules(JBRules* rules);
 
     JBPlayer* jb_createPlayer(JBPlayerType type, JBRules* rules, int seed);

@@ -162,8 +162,8 @@ if __name__ == "__main__":
 
         c = Counter(games)
         
-        print("player {} won {} times".format(0, c[0]))
-        print("player {} won {} times".format(1, c[1]))
+        print("player random   won {} times".format(c[0]))
+        print("player qlearner won {} times".format(c[1]))
         print("draws {}".format(c[-1]))
 
 
@@ -175,6 +175,6 @@ if __name__ == "__main__":
 
         c = Counter(games)
         
-        print("player {} won {} times".format(2, c[0]))
-        print("player {} won {} times".format(3, c[1]))
+        print("player shapley0 won {} times".format(c[0]))
+        print("player shapley1 won {} times".format(c[1]))
         print("draws {}".format(c[-1]))

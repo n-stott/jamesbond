@@ -9,7 +9,11 @@
 
 class QLearner : public Player {
 public:
-    explicit QLearner(int seed = 0) : rand_(seed) { }
+    static std::unique_ptr<QLearner> tryCreate(const Rules& rules, int seed = 0) {
+        if(rules.startLives * rules.maxBullets * rules.maxShields > 1000) return {};
+        return std::unique_ptr<QLearner>(new QLearner(rules, seed));
+    }
+
     Action nextAction(const PlayerState& myState, const PlayerState& opponentState);
     void learnFromGame(const GameRecording& recording);
 
@@ -23,6 +27,8 @@ public:
     }
 
 private:
+    explicit QLearner(const Rules& rules, int seed = 0) : Player(rules), rand_(seed) { }
+
     struct QState {
         // Single player state can be encoded 216 values
         // 6 (lives) * 6 (bullets) * 6 (shields) = 216 < 256

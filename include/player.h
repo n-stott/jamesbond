@@ -7,11 +7,11 @@ class GameRecording;
 
 class Player {
 public:
+    explicit Player(const Rules& rules) : rules_(rules) { }
     virtual ~Player() = default;
+    
     virtual Action nextAction(const PlayerState& myState, const PlayerState& opponentState) = 0;
     virtual void learnFromGame(const GameRecording& recording) = 0;
-
-    void setRules(Rules rules) { rules_ = rules; }
 
     const Rules& rules() const { return rules_; }
 

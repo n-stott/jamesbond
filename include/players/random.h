@@ -6,7 +6,7 @@
 
 class RandomPlayer : public Player {
 public:
-    explicit RandomPlayer(int seed) : rand(seed) { }
+    explicit RandomPlayer(const Rules& rules, int seed) : Player(rules), rand(seed) { }
 
     Action nextAction(const PlayerState& myState, const PlayerState&) override {
         return myState.randomAllowedAction(&rand, rules_);

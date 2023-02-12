@@ -15,21 +15,17 @@ extern "C" {
     };
 
     struct JBPlayerState {
-        JBPlayerState(int lives, int bullets, int remainingShields) : lives(lives), bullets(bullets), remainingShields(remainingShields) { }
-        int lives;
-        int bullets;
-        int remainingShields;
+        JBPlayerState(int lives, int bullets, int remainingShields) : state(PlayerState::from(lives, bullets, remainingShields)) { }
+        PlayerState state;
     };
 
     struct JBRules {
-        JBRules(int startLives, int maxBullets, int maxShields) :startLives(startLives), maxBullets(maxBullets), maxShields(maxShields) { }
-        int startLives;
-        int maxBullets;
-        int maxShields;
+        JBRules(int startLives, int maxBullets, int maxShields, int maxTurns) : rules{startLives, maxBullets, maxShields, maxTurns} { }
+        Rules rules;
     };
 
-    JBRules* jb_createRules(int startLives, int maxBullets, int maxShields) {
-        std::unique_ptr<JBRules> rules = std::make_unique<JBRules>(startLives, maxBullets, maxShields);
+    JBRules* jb_createRules(int startLives, int maxBullets, int maxShields, int maxTurns) {
+        std::unique_ptr<JBRules> rules = std::make_unique<JBRules>(startLives, maxBullets, maxShields, maxTurns);
         return rules.release();
     }
 
@@ -39,29 +35,29 @@ extern "C" {
     }
 
     JBPlayer* jb_createPlayer(JBPlayerType type, JBRules* rules, int seed) {
+        if(!rules) return nullptr;
         std::unique_ptr<Player> p;
         switch(type) {
             case JBPlayerType::RANDOM: {
-                p = std::make_unique<RandomPlayer>(seed);
+                p = std::make_unique<RandomPlayer>(rules->rules, seed);
                 break;
             }
             case JBPlayerType::QLEARNER: {
-                p = std::make_unique<QLearner>(seed);
-                RandomPlayer r(seed+1);
+                p = QLearner::tryCreate(rules->rules, seed);
+                if(!p) return nullptr;
+                RandomPlayer r(!!rules ? rules->rules : Rules{}, seed+1);
                 Tourney::Params semiB{false, true};
                 Tourney::run(100000, &r, p.get(), semiB);
                 break;
             }
             case JBPlayerType::SHAPLEY: {
-                p = std::make_unique<Shapley>(seed);
+                p = Shapley::tryCreate(rules->rules, seed);
+                if(!p) return nullptr;
                 break;
             }
             default: break;
         }
         if(!p) return nullptr;
-        if(!!rules) {
-            p->setRules(Rules{rules->startLives, rules->maxBullets, rules->maxShields});
-        }
         std::unique_ptr<JBPlayer> jbp = std::make_unique<JBPlayer>(std::move(p));
         return jbp.release();
     }
@@ -83,19 +79,19 @@ extern "C" {
 
     JBError jb_lives(JBPlayerState* state, int* lives) {
         if(!state) return JBError::INVALID_STATE;
-        *lives = state->lives;
+        *lives = state->state.lives();
         return JBError::NONE;
     }
 
     JBError jb_bullets(JBPlayerState* state, int* bullets) {
         if(!state) return JBError::INVALID_STATE;
-        *bullets = state->bullets;
+        *bullets = state->state.bullets();
         return JBError::NONE;
     }
     
     JBError jb_remainingShields(JBPlayerState* state, int* remainingShields) {
         if(!state) return JBError::INVALID_STATE;
-        *remainingShields = state->remainingShields;
+        *remainingShields = state->state.remainingShields();
         return JBError::NONE;
     }
 
@@ -109,9 +105,9 @@ extern "C" {
     }
 
     static bool isStateValid(const JBPlayerState& state, const JBRules& rules) {
-        if(state.lives < 0 || state.lives > rules.startLives) return false;
-        if(state.bullets < 0 || state.bullets > rules.maxBullets) return false;
-        if(state.remainingShields < 0 || state.remainingShields > rules.maxShields) return false;
+        if(state.state.lives() < 0 || state.state.lives() > rules.rules.startLives) return false;
+        if(state.state.bullets() < 0 || state.state.bullets() > rules.rules.maxBullets) return false;
+        if(state.state.remainingShields() < 0 || state.state.remainingShields() > rules.rules.maxShields) return false;
         return true;
     }
 
@@ -122,8 +118,8 @@ extern "C" {
         if(!rules) return JBError::INVALID_RULES;
         if(!isStateValid(*ownState, *rules)) return JBError::INVALID_STATE;
         if(!isStateValid(*opponentState, *rules)) return JBError::INVALID_STATE;
-        PlayerState mine = PlayerState::from(ownState->lives, ownState->bullets, ownState->remainingShields);
-        PlayerState theirs = PlayerState::from(opponentState->lives, opponentState->bullets, opponentState->remainingShields);
+        PlayerState mine = ownState->state;
+        PlayerState theirs = opponentState->state;
         Action a = player->playerHandle->nextAction(mine, theirs);
         switch(a) {
             case Action::Reload: *action = JBAction::RELOAD; return JBError::NONE;
@@ -139,20 +135,16 @@ extern "C" {
         if(!stateA) return JBError::INVALID_STATE;
         if(!stateB) return JBError::INVALID_STATE;
         if(!(playerA->playerHandle->rules() == playerB->playerHandle->rules())) return JBError::INVALID_RULES;
-        PlayerState sa = PlayerState::from(stateA->lives, stateA->bullets, stateA->remainingShields);
-        PlayerState sb = PlayerState::from(stateB->lives, stateB->bullets, stateB->remainingShields);
+        PlayerState sa = stateA->state;
+        PlayerState sb = stateB->state;
         GameState gs = GameState::from(playerA->playerHandle.get(),
                                        playerB->playerHandle.get(),
                                        sa,
                                        sb);
         const Rules& rules = playerA->playerHandle->rules();
         gs.resolve(fromJBAction(actionA), fromJBAction(actionB), rules);
-        stateA->lives = gs.stateA().lives();
-        stateB->lives = gs.stateB().lives();
-        stateA->bullets = gs.stateA().bullets();
-        stateB->bullets = gs.stateB().bullets();
-        stateA->remainingShields = gs.stateA().remainingShields();
-        stateB->remainingShields = gs.stateB().remainingShields();
+        stateA->state = gs.stateA();
+        stateB->state = gs.stateB();
         return JBError::NONE;
     }
 }
