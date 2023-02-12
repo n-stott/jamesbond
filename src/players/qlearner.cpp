@@ -1,4 +1,5 @@
 #include "players/qlearner.h"
+#include "gamerecording.h"
 
 int QLearner::QState::configToIndex(const PlayerState& me, const PlayerState& opponent) {
     return me.lives() + 6*me.bullets() + 6*6*me.remainingShields()
@@ -24,7 +25,7 @@ Action QLearner::nextAction(const PlayerState& myState, const PlayerState& oppon
     if(scoreShield.score < worstScore.score) worstScore = scoreShield;
     if(scoreShoot.score < worstScore.score) worstScore = scoreShoot;
     if(bestScore.confidence < 5 || worstScore.confidence < 5 || std::abs(bestScore.score - worstScore.score) < 1) {
-        return myState.randomAllowedAction(&rand_);
+        return myState.randomAllowedAction(&rand_, rules_);
     } else {
         return action;
     }

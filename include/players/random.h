@@ -9,7 +9,7 @@ public:
     explicit RandomPlayer(int seed) : rand(seed) { }
 
     Action nextAction(const PlayerState& myState, const PlayerState&) override {
-        return myState.randomAllowedAction(&rand);
+        return myState.randomAllowedAction(&rand, rules_);
     }
 
     void learnFromGame(const GameRecording&) override { }

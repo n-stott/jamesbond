@@ -5,10 +5,6 @@
 #include <array>
 #include <vector>
 
-#define START_LIVES 5
-#define MAX_BULLETS 5
-#define MAX_SHIELDS 5 
-
 class Player;
 
 enum class Action {
@@ -17,10 +13,24 @@ enum class Action {
     Shoot,
 };
 
+struct Rules {
+    int startLives = 5;
+    int maxBullets = 5;
+    int maxShields = 5;
+    int maxTurns = 1000;
+
+    friend bool operator==(const Rules& a, const Rules& b) {
+        return a.startLives == b.startLives
+            && a.maxBullets == b.maxBullets
+            && a.maxShields == b.maxShields
+            && a.maxTurns == b.maxTurns;
+    }
+};
+
 class PlayerState {
 public:
-    PlayerState() : lives_(START_LIVES), bullets_(0), remainingShields_(MAX_SHIELDS) { }
-    explicit PlayerState(int lives) : PlayerState() { lives_ = lives; }
+    explicit PlayerState() : PlayerState(Rules{}) { }
+    explicit PlayerState(const Rules& rules) : lives_(rules.startLives), bullets_(0), remainingShields_(rules.maxShields) { }
 
     static PlayerState from(int lives, int bullets, int remainingShields) {
         PlayerState s;
@@ -30,10 +40,10 @@ public:
         return s;
     }
 
-    Action randomAllowedAction(Rand* rand) const {
+    Action randomAllowedAction(Rand* rand, const Rules& rules) const {
         std::array<Action, 3> availableActions;
         int nbAvailableActions = 0;
-        if(bullets_ < MAX_BULLETS) availableActions[nbAvailableActions++] = Action::Reload;
+        if(bullets_ < rules.maxBullets) availableActions[nbAvailableActions++] = Action::Reload;
         if(bullets_ > 0) availableActions[nbAvailableActions++] = Action::Shoot;
         if(remainingShields_ > 0) availableActions[nbAvailableActions++] = Action::Shield;
         return availableActions[rand->pick(nbAvailableActions)];
@@ -45,20 +55,20 @@ public:
 
     void die() { lives_ = 0; }
 
-    bool isLegalAction(Action a) const {
+    bool isLegalAction(Action a, const Rules& rules) const {
         switch(a) {
-            case Action::Reload: return bullets_ < MAX_BULLETS;
+            case Action::Reload: return bullets_ < rules.maxBullets;
             case Action::Shield: return remainingShields_ > 0;
             case Action::Shoot: return bullets_ > 0;
         }
     }
 
-    void resolveOwnAction(Action a) {
+    void resolveOwnAction(Action a, const Rules& rules) {
         assert(isLegalAction(a));
         switch(a) {
             case Action::Reload: {
                 ++bullets_;
-                remainingShields_ = MAX_SHIELDS;
+                remainingShields_ = rules.maxShields;
                 return;
             }
             case Action::Shield: {
@@ -67,7 +77,7 @@ public:
             }
             case Action::Shoot: {
                 --bullets_;
-                remainingShields_ = MAX_SHIELDS;
+                remainingShields_ = rules.maxShields;
                 return;
             }
         }
@@ -106,12 +116,12 @@ public:
         return stateA_.lives() <= 0 || stateB_.lives() <= 0;
     }
 
-    void resolve(Action actionA, Action actionB) {
-        if(!stateA_.isLegalAction(actionA)) stateA_.die();
-        if(!stateB_.isLegalAction(actionB)) stateB_.die();
+    void resolve(Action actionA, Action actionB, const Rules& rules) {
+        if(!stateA_.isLegalAction(actionA, rules)) stateA_.die();
+        if(!stateB_.isLegalAction(actionB, rules)) stateB_.die();
         if(gameOver()) return;
-        stateA_.resolveOwnAction(actionA);
-        stateB_.resolveOwnAction(actionB);
+        stateA_.resolveOwnAction(actionA, rules);
+        stateB_.resolveOwnAction(actionB, rules);
         stateA_.resolveOpponentAction(actionA, actionB);
         stateB_.resolveOpponentAction(actionB, actionA);
     }
@@ -150,51 +160,6 @@ private:
     PlayerState stateA_;
     PlayerState stateB_;
 
-};
-
-class GameRecording {
-public:
-    GameRecording(const Player* a, const Player* b) : a_(a), b_(b), winner_(nullptr) { }
-
-    void clear() {
-        actionsA_.clear();
-        actionsB_.clear();
-    }
-
-    void record(Action a, Action b) {
-        actionsA_.push_back(a);
-        actionsB_.push_back(b);
-    }
-
-    void recordWinner(const Player* winner) {
-        winner_ = winner;
-    }
-
-    template<typename Callback>
-    void replay(Callback&& callback) const {
-        GameState replayState(a_, b_);
-        size_t turn = 0;
-        while(!replayState.gameOver() && turn < actionsA_.size()) {
-            Action actionA = actionsA_[turn];
-            Action actionB = actionsB_[turn];
-            ++turn;
-            GameStateSnapshot before = replayState.snap();
-            replayState.resolve(actionA, actionB);
-            GameStateSnapshot after = replayState.snap();
-            callback(before, after, actionA, actionB);
-        }
-    }
-
-    const Player* winner() const { return winner_; }
-    const Player* playerA() const { return a_; }
-    const Player* playerB() const { return b_; }
-
-private:
-    const Player* a_;
-    const Player* b_;
-    const Player* winner_;
-    std::vector<Action> actionsA_;
-    std::vector<Action> actionsB_;
 };
 
 #endif

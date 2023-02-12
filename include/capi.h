@@ -30,7 +30,7 @@ extern "C" {
     JBRules* jb_createRules(int startLives, int maxBullets, int maxShields);
     void jb_destroyRules(JBRules* rules);
 
-    JBPlayer* jb_createPlayer(JBPlayerType type, int seed);
+    JBPlayer* jb_createPlayer(JBPlayerType type, JBRules* rules, int seed);
     void jb_destroyPlayer(JBPlayer* player);
 
     JBPlayerState* jb_createState(int lives, int bullets, int remainingShields);

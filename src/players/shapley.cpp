@@ -84,7 +84,7 @@ static double gameStateValue(const GameState& s) {
     return gameStateValue(s.stateA(), s.stateB());
 }
 
-static std::unique_ptr<GameGraph> make_graph() {
+static std::unique_ptr<GameGraph> make_graph(const Rules& rules) {
     GameGraph graph;
 
     std::set<GameState, StateComparator> visitedStates;
@@ -98,7 +98,7 @@ static std::unique_ptr<GameGraph> make_graph() {
         for(Action a : actions) {
             for(Action b : actions) {
                 GameState t = s;
-                t.resolve(a, b);
+                t.resolve(a, b, rules);
                 if(t.gameOver()) continue;
                 if(visitedStates.find(t) != visitedStates.end()) continue;
                 stateQueue.push_back(t);
@@ -117,7 +117,7 @@ static std::unique_ptr<GameGraph> make_graph() {
                 auto& edgeEntry = edgesTable[(int)a][(int)b];
                 auto& edgesCostEntry = edgesCostTable[(int)a][(int)b];
                 GameState t = s;
-                t.resolve(a, b);
+                t.resolve(a, b, rules);
                 if(t.gameOver()) {
                     const Player* winner = t.winner();
                     if(winner == &graph.a) {
@@ -394,7 +394,7 @@ static std::vector<StrategyPoint> approximateMeanPayoff(const GameGraph& g) {
 }
 
 Shapley::Shapley(int seed) : rand_(seed) {
-    gameGraph_ = make_graph();
+    gameGraph_ = make_graph(rules_);
     if(!gameGraph_) return;
     meanPayoff_ = approximateMeanPayoff(*gameGraph_);
 }

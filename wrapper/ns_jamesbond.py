@@ -42,6 +42,9 @@ class Rules:
         c_lib.jb_destroyRules.restype = None
         c_lib.jb_destroyRules(c_.c_void_p(self.c_rules))
 
+    def __eq__(self, other): 
+        return self.startLives == other.startLives and self.maxBullets == other.maxBullets and self.maxRemainingShields == other.maxRemainingShields
+
 class PlayerState:
     def __init__(self, lives, bullets, remainingShields):
         c_lib.jb_createState.restype = c_.c_void_p
@@ -76,9 +79,10 @@ class PlayerState:
         return remainingShields.value
 
 class Player:
-    def __init__(self, type, seed):
+    def __init__(self, type, rules, seed):
         c_lib.jb_createPlayer.restype = c_.c_void_p
-        self.c_player = c_lib.jb_createPlayer(c_.c_int(type.value), c_.c_int(seed))
+        self.c_player = c_lib.jb_createPlayer(c_.c_int(type.value), c_.c_void_p(rules.c_rules), c_.c_int(seed))
+        self.rules = rules
 
     def __del__(self):
         c_lib.jb_destroyPlayer.restype = None
@@ -121,32 +125,56 @@ def playGame(p0, p1, rules):
 
         applyActions(p0, p1, s0, s1, a0, a1)
 
+    verbose = False
     if turns >= max_turns or (s0.lives() == 0 and s1.lives() == 0):
-        print("Draw")
+        if verbose:
+            print("Draw")
         return -1
     elif s0.lives() > 0 and s1.lives() == 0:
-        print("Player 0 wins")
+        if verbose:
+            print("Player 0 wins")
         return 0
     elif s0.lives() == 0 and s1.lives() > 0:
-        print("Player 1 wins")
+        if verbose:
+            print("Player 1 wins")
         return 1
     else:
-        print("what ?")
-        print("turns=", turns)
-        print("p0: lives={} bullets={} shields={}", s0.lives(), s0.bullets(), s0.remainingShields())
-        print("p1: lives={} bullets={} shields={}", s1.lives(), s1.bullets(), s1.remainingShields())
+        if verbose:
+            print("what ?")
+            print("turns=", turns)
+            print("p0: lives={} bullets={} shields={}", s0.lives(), s0.bullets(), s0.remainingShields())
+            print("p1: lives={} bullets={} shields={}", s1.lives(), s1.bullets(), s1.remainingShields())
         return -2
 
 if __name__ == "__main__":
-    p0 = Player(PlayerType.RANDOM, 0)
-    p1 = Player(PlayerType.QLEARNER, 1)
-
     rules = Rules(5, 5, 5)
 
-    games = []
-    for _ in range(100):
-        res = playGame(p0, p1, rules)
-        games.append(res)
+    p0 = Player(PlayerType.RANDOM, rules, 0)
+    p1 = Player(PlayerType.QLEARNER, rules, 1)
+    p2 = Player(PlayerType.SHAPLEY, rules, 2)
+    p3 = Player(PlayerType.SHAPLEY, rules, 3)
 
-    print(Counter(games))    
+    if True:
+        games = []
+        for _ in range(1000):
+            res = playGame(p0, p1, rules)
+            games.append(res)
 
+        c = Counter(games)
+        
+        print("player {} won {} times".format(0, c[0]))
+        print("player {} won {} times".format(1, c[1]))
+        print("draws {}".format(c[-1]))
+
+
+    if True:
+        games = []
+        for _ in range(1000):
+            res = playGame(p2, p3, rules)
+            games.append(res)
+
+        c = Counter(games)
+        
+        print("player {} won {} times".format(2, c[0]))
+        print("player {} won {} times".format(3, c[1]))
+        print("draws {}".format(c[-1]))

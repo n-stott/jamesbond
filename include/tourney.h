@@ -2,6 +2,7 @@
 #define TOURNEY_H
 
 #include "gamearena.h"
+#include "gamerecording.h"
 #include "player.h"
 
 class Tourney {

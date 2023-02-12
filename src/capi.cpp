@@ -38,7 +38,7 @@ extern "C" {
         delete rules;
     }
 
-    JBPlayer* jb_createPlayer(JBPlayerType type, int seed) {
+    JBPlayer* jb_createPlayer(JBPlayerType type, JBRules* rules, int seed) {
         std::unique_ptr<Player> p;
         switch(type) {
             case JBPlayerType::RANDOM: {
@@ -59,6 +59,9 @@ extern "C" {
             default: break;
         }
         if(!p) return nullptr;
+        if(!!rules) {
+            p->setRules(Rules{rules->startLives, rules->maxBullets, rules->maxShields});
+        }
         std::unique_ptr<JBPlayer> jbp = std::make_unique<JBPlayer>(std::move(p));
         return jbp.release();
     }
@@ -135,13 +138,15 @@ extern "C" {
         if(!playerB) return JBError::INVALID_PLAYER;
         if(!stateA) return JBError::INVALID_STATE;
         if(!stateB) return JBError::INVALID_STATE;
+        if(!(playerA->playerHandle->rules() == playerB->playerHandle->rules())) return JBError::INVALID_RULES;
         PlayerState sa = PlayerState::from(stateA->lives, stateA->bullets, stateA->remainingShields);
         PlayerState sb = PlayerState::from(stateB->lives, stateB->bullets, stateB->remainingShields);
         GameState gs = GameState::from(playerA->playerHandle.get(),
                                        playerB->playerHandle.get(),
                                        sa,
                                        sb);
-        gs.resolve(fromJBAction(actionA), fromJBAction(actionB));
+        const Rules& rules = playerA->playerHandle->rules();
+        gs.resolve(fromJBAction(actionA), fromJBAction(actionB), rules);
         stateA->lives = gs.stateA().lives();
         stateB->lives = gs.stateB().lives();
         stateA->bullets = gs.stateA().bullets();
