@@ -2,17 +2,10 @@
 #define SHAPLEY_H
 
 #include "player.h"
+#include "bilinearminmax.h"
 #include <memory>
 
 struct GameGraph;
-
-struct Point { double p[3]; };
-
-struct StrategyPoint {
-    double value = 0.0;
-    Point a {};
-    Point b {};
-};
 
 class Shapley : public Player {
 public:
