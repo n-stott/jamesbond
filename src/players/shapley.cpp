@@ -253,13 +253,7 @@ Action Shapley::nextAction(const PlayerState& stateA, const PlayerState& stateB)
     // auto A = formCostMatrix(*gameGraph_, meanPayoff_, pos);
     // printCostMatrix(A);
     // fmt::print("{}/{} {}   Astrat={}/{}/{} Bstrat={}/{}/{}\n", pos, gameGraph_->states.size(), payoff.value, payoff.a.p[0], payoff.a.p[1], payoff.a.p[2], payoff.b.p[0], payoff.b.p[1], payoff.b.p[2]);
-    int toss = rand_.pick(1001);
-    if(toss <= 1000*payoff.p.p[0])
-        return Action::Reload;
-    else if(toss <= 1000*(payoff.p.p[0]+payoff.p.p[1]))
-        return Action::Shield;
-    else
-        return Action::Shoot;
+    return actionWithBias(rand_, payoff.p.p[0], payoff.p.p[1], payoff.p.p[2]);
 }
 
 void Shapley::learnFromGame(const GameRecording&) {

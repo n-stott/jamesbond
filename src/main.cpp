@@ -1,6 +1,7 @@
 #include "tourney.h"
 #include "gamearena.h"
 #include "players/random.h"
+#include "players/biasedrandom.h"
 #include "players/qlearner.h"
 #include "players/shapley.h"
 #include "player.h"
@@ -14,7 +15,7 @@ void testA() {
     RandomPlayer a(rules, 0);
     RandomPlayer b(rules, 1);
     Tourney::Params closed{false, false}; 
-    Tourney::Result AvsB = Tourney::run(10000, &a, &b, closed);
+    Tourney::Result AvsB = Tourney::play2v2(10000, &a, &b, closed);
     fmt::print("Random vs Random: ties={} winsA={} winsB={}\n\n", AvsB.ties, AvsB.winsA, AvsB.winsB);
 
     Tourney::Params open{true, true};
@@ -23,7 +24,7 @@ void testA() {
     QLearner q0 = *q;
     Tourney::Result AvsQ0;
     for(int i = 0; i < 10; ++i) { 
-        AvsQ0 = Tourney::run(100000, &a, &q0, open);
+        AvsQ0 = Tourney::play2v2(100000, &a, &q0, open);
         fmt::print("Random vs QLearn0: ties={} winsA={} winsC={}\n", AvsQ0.ties, AvsQ0.winsA, AvsQ0.winsB);
     }
     fmt::print("q0 confidence:{}%\n", q0.confidence());
@@ -34,22 +35,22 @@ void testA() {
     QLearner q1 = *q;
     Tourney::Result AvsQ1;
     for(int i = 0; i < 10; ++i) {
-        AvsQ1 = Tourney::run(100000, &a, &q1, open);
+        AvsQ1 = Tourney::play2v2(100000, &a, &q1, open);
         fmt::print("Random vs QLearn1: ties={} winsA={} winsC={}\n", AvsQ1.ties, AvsQ1.winsA, AvsQ1.winsB);
     }
     fmt::print("q1 confidence:{}%\n", q1.confidence());
     fmt::print("\n");
 
-    Tourney::Result Q0vsQ1 = Tourney::run(10000, &q0, &q1, closed);
+    Tourney::Result Q0vsQ1 = Tourney::play2v2(10000, &q0, &q1, closed);
     fmt::print("QLearn0 vs QLearn1: ties={} winsA={} winsB={}\n\n", Q0vsQ1.ties, Q0vsQ1.winsA, Q0vsQ1.winsB);
 
     
     Tourney::Params semiA{true, false};
     Tourney::Params semiB{false, true};
-    Q0vsQ1 = Tourney::run(10000, &q0, &q1, semiA);
+    Q0vsQ1 = Tourney::play2v2(10000, &q0, &q1, semiA);
     fmt::print("QLearn0 vs QLearn1: ties={} winsA={} winsB={}\n\n", Q0vsQ1.ties, Q0vsQ1.winsA, Q0vsQ1.winsB);
 
-    Q0vsQ1 = Tourney::run(10000, &q0, &q1, semiB);
+    Q0vsQ1 = Tourney::play2v2(10000, &q0, &q1, semiB);
     fmt::print("QLearn0 vs QLearn1: ties={} winsA={} winsB={}\n\n", Q0vsQ1.ties, Q0vsQ1.winsA, Q0vsQ1.winsB);
 }
 
@@ -57,7 +58,7 @@ std::unique_ptr<QLearner> createAndtrainQLearnerVsRandom(const Rules& rules, int
     std::unique_ptr<Player> r = std::make_unique<RandomPlayer>(rules, seed);
     std::unique_ptr<QLearner> q = QLearner::tryCreate(rules, seed);
     Tourney::Params semiB{false, true};
-    Tourney::run(100000, r.get(), q.get(), semiB);
+    Tourney::play2v2(100000, r.get(), q.get(), semiB);
     return q;
 }
 
@@ -83,7 +84,7 @@ void testB() {
                 int a = order[i];
                 int b = order[j];
                 Tourney::Params open{true, true};
-                Tourney::Result AvsB = Tourney::run(1000, players[a].get(), players[b].get(), open);
+                Tourney::Result AvsB = Tourney::play2v2(1000, players[a].get(), players[b].get(), open);
                 wins[a] += AvsB.winsA;
                 wins[b] += AvsB.winsB;
                 ties[a] += AvsB.ties;
@@ -108,13 +109,13 @@ void testC() {
     Tourney::Params closed{false, false}; 
     Tourney::Params open{true, true}; 
 
-    Tourney::Result SvsR = Tourney::run(10000, s.get(), &b, closed);
+    Tourney::Result SvsR = Tourney::play2v2(10000, s.get(), &b, closed);
     fmt::print("Shapley vs Random: ties={} winsA={} winsB={}\n\n", SvsR.ties, SvsR.winsA, SvsR.winsB);
 
-    Tourney::Result SvsQ = Tourney::run(10000, s.get(), q.get(), closed);
+    Tourney::Result SvsQ = Tourney::play2v2(10000, s.get(), q.get(), closed);
     fmt::print("Shapley vs QLearner: ties={} winsA={} winsB={}\n\n", SvsQ.ties, SvsQ.winsA, SvsQ.winsB);
 
-    SvsQ = Tourney::run(1000000, s.get(), q.get(), open);
+    SvsQ = Tourney::play2v2(1000000, s.get(), q.get(), open);
     fmt::print("Shapley vs QLearner: ties={} winsA={} winsB={}\n\n", SvsQ.ties, SvsQ.winsA, SvsQ.winsB);
 
     // GameArena arena;
@@ -123,8 +124,35 @@ void testC() {
     // arena.replay(rec);
 }
 
+void testD() {
+    Rules rules;
+    
+    RandomPlayer random(rules, 0);
+    
+    BiasedRandomPlayer reloader(rules, 1, 5, 1, 1);
+    BiasedRandomPlayer protective(rules, 2, 1, 5, 1);
+    BiasedRandomPlayer aggressive(rules, 3, 1, 1, 5);
+
+    auto qlearner = QLearner::tryCreate(rules, 4);
+    auto trainedQlearner = createAndtrainQLearnerVsRandom(rules, 5);
+
+    auto shapley = Shapley::tryCreate(rules, 6);
+
+    Tourney tourney;
+    tourney.addPlayer("pure random", &random);
+    tourney.addPlayer("random b/reload", &reloader);
+    tourney.addPlayer("random b/shield", &protective);
+    tourney.addPlayer("random b/shoot", &aggressive);
+    tourney.addPlayer("base qlearner", qlearner.get());
+    tourney.addPlayer("trained qlearner", trainedQlearner.get());
+    tourney.addPlayer("shapley", shapley.get());
+
+    tourney.run();
+}
+
 int main() {
     // testA();
     // testB();
-    testC();
+    // testC();
+    testD();
 }

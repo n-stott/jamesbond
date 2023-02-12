@@ -47,7 +47,7 @@ extern "C" {
                 if(!p) return nullptr;
                 RandomPlayer r(!!rules ? rules->rules : Rules{}, seed+1);
                 Tourney::Params semiB{false, true};
-                Tourney::run(100000, &r, p.get(), semiB);
+                Tourney::play2v2(100000, &r, p.get(), semiB);
                 break;
             }
             case JBPlayerType::SHAPLEY: {

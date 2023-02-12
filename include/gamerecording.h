@@ -25,7 +25,7 @@ public:
 
     template<typename Callback>
     void replay(Callback&& callback) const {
-        assert(a_->rules() == b->rules());
+        assert(a_->rules() == b_->rules());
         GameState replayState(a_, b_);
         size_t turn = 0;
         while(!replayState.gameOver() && turn < actionsA_.size()) {

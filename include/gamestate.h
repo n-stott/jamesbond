@@ -13,6 +13,15 @@ enum class Action {
     Shoot,
 };
 
+inline static Action actionWithBias(Rand& rand, double biasReload, double biasShield, double biasShoot) {
+    int choice = rand.pickWithBias(biasReload, biasShield, biasShoot);
+    if(choice == 0) return Action::Reload;
+    if(choice == 1) return Action::Shield;
+    if(choice == 2) return Action::Shoot;
+    assert(false);
+    return Action::Shoot;
+}
+
 struct Rules {
     int startLives = 5;
     int maxBullets = 5;
@@ -44,9 +53,22 @@ public:
         std::array<Action, 3> availableActions;
         int nbAvailableActions = 0;
         if(bullets_ < rules.maxBullets) availableActions[nbAvailableActions++] = Action::Reload;
-        if(bullets_ > 0) availableActions[nbAvailableActions++] = Action::Shoot;
         if(remainingShields_ > 0) availableActions[nbAvailableActions++] = Action::Shield;
+        if(bullets_ > 0) availableActions[nbAvailableActions++] = Action::Shoot;
         return availableActions[rand->pick(nbAvailableActions)];
+    }
+
+    Action randomAllowedActionWithBias(Rand* rand, const Rules& rules, double biasReload, double biasShield, double biasShoot) const {
+        if(!isLegalAction(Action::Reload, rules)) {
+            biasReload = 0.0;
+        }
+        if(!isLegalAction(Action::Shield, rules)) {
+            biasShield = 0.0;
+        }
+        if(!isLegalAction(Action::Shoot, rules)) {
+            biasShoot = 0.0;
+        }
+        return (Action)rand->pickWithBias(biasReload, biasShield, biasShoot);
     }
 
     int lives() const { return lives_; }
@@ -64,7 +86,7 @@ public:
     }
 
     void resolveOwnAction(Action a, const Rules& rules) {
-        assert(isLegalAction(a));
+        assert(isLegalAction(a, rules));
         switch(a) {
             case Action::Reload: {
                 ++bullets_;
