@@ -2,6 +2,7 @@ import ctypes as c_
 import pathlib
 from enum import Enum
 from collections import Counter
+import random as rd
 
 libjbname = pathlib.Path().absolute() / "libjamesbond.so"
 c_lib = c_.CDLL(libjbname)
@@ -10,7 +11,8 @@ c_lib = c_.CDLL(libjbname)
 class PlayerType(Enum):
     RANDOM = 0
     QLEARNER = 1
-    SHAPLEY = 2
+    BILINEAR = 2
+    SHAPLEY = 3
 
 class Action(Enum):
     RELOAD = 0
@@ -79,7 +81,8 @@ class PlayerState:
         return remainingShields.value
 
 class Player:
-    def __init__(self, type, rules, seed):
+    def __init__(self, type, rules):
+        seed = rd.randint(0, 1000)
         c_lib.jb_createPlayer.restype = c_.c_void_p
         self.c_player = c_lib.jb_createPlayer(c_.c_int(type.value), c_.c_void_p(rules.c_rules), c_.c_int(seed))
         self.rules = rules
@@ -149,10 +152,10 @@ def playGame(p0, p1, rules):
 if __name__ == "__main__":
     rules = Rules(5, 5, 5)
 
-    p0 = Player(PlayerType.RANDOM, rules, 0)
-    p1 = Player(PlayerType.QLEARNER, rules, 1)
-    p2 = Player(PlayerType.SHAPLEY, rules, 2)
-    p3 = Player(PlayerType.SHAPLEY, rules, 3)
+    p0 = Player(PlayerType.RANDOM, rules)
+    p1 = Player(PlayerType.QLEARNER, rules)
+    p2 = Player(PlayerType.BILINEAR, rules)
+    p3 = Player(PlayerType.SHAPLEY, rules)
 
     if True:
         games = []
@@ -175,6 +178,6 @@ if __name__ == "__main__":
 
         c = Counter(games)
         
-        print("player shapley0 won {} times".format(c[0]))
-        print("player shapley1 won {} times".format(c[1]))
+        print("player bilinear won {} times".format(c[0]))
+        print("player shapley won {} times".format(c[1]))
         print("draws {}".format(c[-1]))

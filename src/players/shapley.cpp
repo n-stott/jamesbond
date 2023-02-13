@@ -204,7 +204,7 @@ static std::array<std::array<double, 3>, 3> formCostMatrix(const GameGraph& g, c
 static std::vector<StrategyPoint> approximateMeanPayoff(const GameGraph& g) {
     std::vector<StrategyPoint> v(g.states.size());
     std::vector<StrategyPoint> vNext(g.states.size());
-    const int MAX_ITERATIONS = 200;
+    const int MAX_ITERATIONS = 300;
     int iter = 0;
     for(iter = 0; iter < MAX_ITERATIONS; ++iter) {
         for(size_t i = 0; i < g.states.size(); ++i) {
@@ -212,16 +212,17 @@ static std::vector<StrategyPoint> approximateMeanPayoff(const GameGraph& g) {
             auto solution = BilinearMinMax::solve(A);
             vNext[i] = solution;
         }
-        // size_t diffSize = 0;
-        // size_t diffInf = 0;
-        // size_t finiteMagn = 0;
-        // for(size_t i = 0; i < v.size(); ++i) {
-        //     diffSize += (ssize_t)(v[i].value - vNext[i].value) != 0;
-        //     diffInf += (std::isinf(vNext[i].value) != std::isinf(v[i].value));
-        //     if(!std::isinf(vNext[i].value) && !std::isinf(v[i].value)) finiteMagn += std::abs(vNext[i].value - v[i].value);
-        // }
-        // double d = distance(v, vNext);
+        size_t diffSize = 0;
+        size_t diffInf = 0;
+        size_t finiteMagn = 0;
+        for(size_t i = 0; i < v.size(); ++i) {
+            diffSize += (ssize_t)(v[i].value - vNext[i].value) != 0;
+            diffInf += (std::isinf(vNext[i].value) != std::isinf(v[i].value));
+            if(!std::isinf(vNext[i].value) && !std::isinf(v[i].value)) finiteMagn += std::abs(vNext[i].value - v[i].value);
+        }
+        double d = distance(v, vNext);
         // fmt::print("Iter #{:4}  DiffNz={} DiffInfNz={} diffMagn={} |v-v+|={}\n", iter, diffSize, diffInf, finiteMagn, d);
+        if(d <= 1.0e-3) break;
         v.swap(vNext);
     }
 
@@ -231,9 +232,9 @@ static std::vector<StrategyPoint> approximateMeanPayoff(const GameGraph& g) {
 }
 
 std::unique_ptr<ShapleyPlayer> ShapleyPlayer::tryCreate(const Rules& rules, int seed) {
-    if(rules.startLives > 5) return {};
-    if(rules.maxBullets > 5) return {};
-    if(rules.maxShields > 5) return {};
+    if(rules.startLives > 10) return {};
+    if(rules.maxBullets > 10) return {};
+    if(rules.maxShields > 10) return {};
     return std::unique_ptr<ShapleyPlayer>(new ShapleyPlayer(rules, seed));
 }
 
@@ -250,7 +251,9 @@ Action ShapleyPlayer::nextAction(const PlayerState& stateA, const PlayerState& s
     auto it = std::lower_bound(gameGraph_->states.begin(), gameGraph_->states.end(), p, StateComparator2{});
     size_t pos = std::distance(gameGraph_->states.begin(), it);
     const auto& payoff = meanPayoff_[pos];
-    return actionWithBias(rand_, payoff.p.p[0], payoff.p.p[1], payoff.p.p[2]);
+    Action preferredAction = actionWithBias(rand_, payoff.p.p[0], payoff.p.p[1], payoff.p.p[2]);
+    if(stateA.isLegalAction(preferredAction, rules_)) return preferredAction;
+    return stateA.randomAllowedAction(&rand_, rules_);
 }
 
 void ShapleyPlayer::learnFromGame(const GameRecording&) {

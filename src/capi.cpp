@@ -2,6 +2,7 @@
 #include "player.h"
 #include "players/random.h"
 #include "players/qlearner.h"
+#include "players/bilinear.h"
 #include "players/shapley.h"
 #include "tourney.h"
 
@@ -48,6 +49,11 @@ extern "C" {
                 RandomPlayer r(!!rules ? rules->rules : Rules{}, seed+1);
                 Tourney::Params semiB{false, true};
                 Tourney::play2v2(100000, &r, p.get(), semiB);
+                break;
+            }
+            case JBPlayerType::BILINEAR: {
+                p = std::make_unique<BilinearPlayer>(rules->rules, seed);
+                if(!p) return nullptr;
                 break;
             }
             case JBPlayerType::SHAPLEY: {

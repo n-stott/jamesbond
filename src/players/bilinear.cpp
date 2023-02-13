@@ -34,5 +34,8 @@ Action BilinearPlayer::nextAction(const PlayerState& myState, const PlayerState&
         }
     }
     auto strategy = BilinearMinMax::solve(payoff);
-    return actionWithBias(rand_, strategy.p.p[0], strategy.p.p[1], strategy.p.p[2]);
+    Action preferredAction = actionWithBias(rand_, strategy.p.p[0], strategy.p.p[1], strategy.p.p[2]);
+    if(myState.isLegalAction(preferredAction, rules_)) return preferredAction;
+    return myState.randomAllowedAction(&rand_, rules_);
+
 }

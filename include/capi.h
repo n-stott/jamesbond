@@ -10,6 +10,7 @@ extern "C" {
     enum JBPlayerType : int {
         RANDOM,
         QLEARNER,
+        BILINEAR,
         SHAPLEY,
     };
 

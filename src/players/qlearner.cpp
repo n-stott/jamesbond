@@ -27,7 +27,8 @@ Action QLearner::nextAction(const PlayerState& myState, const PlayerState& oppon
     if(bestScore.confidence < 5 || worstScore.confidence < 5 || std::abs(bestScore.score - worstScore.score) < 1) {
         return myState.randomAllowedAction(&rand_, rules_);
     } else {
-        return action;
+        if(myState.isLegalAction(action, rules_)) return action;
+        return myState.randomAllowedAction(&rand_, rules_);
     }
 }
 

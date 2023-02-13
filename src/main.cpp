@@ -127,6 +127,9 @@ void testC() {
 
 void testD() {
     Rules rules;
+    rules.startLives = 5;
+    rules.maxShields = 5;
+    rules.maxBullets = 5;
     
     RandomPlayer random(rules, 0);
     
