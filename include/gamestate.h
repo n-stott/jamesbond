@@ -124,11 +124,11 @@ struct GameStateSnapshot {
 
 class GameState {
 public:
-    GameState(const Player* a, const Player* b) : playerA_(a), playerB_(b) { }
+    GameState() = default;
     virtual ~GameState() = default;
 
-    static GameState from(const Player* a, const Player* b, const PlayerState& sa, const PlayerState& sb) {
-        GameState gs(a, b);
+    static GameState from(const PlayerState& sa, const PlayerState& sb) {
+        GameState gs;
         gs.stateA_ = sa;
         gs.stateB_ = sb;
         return gs;
@@ -152,33 +152,27 @@ public:
         return GameStateSnapshot{stateA(), stateB()};
     }
 
-    const Player* winner() const {
-        if(!gameOver()) return breakTie();
-        if(stateA_.lives() > 0) return playerA_;
-        if(stateB_.lives() > 0) return playerB_;
+    const Player* winner(const Player* a, const Player* b) const {
+        if(!gameOver()) return breakTie(a, b);
+        if(stateA_.lives() > 0) return a;
+        if(stateB_.lives() > 0) return b;
         return nullptr;
     }
 
-    const Player* breakTie() const {
-        if(stateA_.lives() > stateB_.lives()) return playerA_;
-        if(stateB_.lives() > stateA_.lives()) return playerB_;
-        if(stateA_.bullets() > stateB_.bullets()) return playerA_;
-        if(stateB_.bullets() > stateA_.bullets()) return playerB_;
-        if(stateA_.remainingShields() > stateB_.remainingShields()) return playerA_;
-        if(stateB_.remainingShields() > stateA_.remainingShields()) return playerB_;
+    const Player* breakTie(const Player* a, const Player* b) const {
+        if(stateA_.lives() > stateB_.lives()) return a;
+        if(stateB_.lives() > stateA_.lives()) return b;
+        if(stateA_.bullets() > stateB_.bullets()) return a;
+        if(stateB_.bullets() > stateA_.bullets()) return b;
+        if(stateA_.remainingShields() > stateB_.remainingShields()) return a;
+        if(stateB_.remainingShields() > stateA_.remainingShields()) return b;
         return nullptr;
     }
 
     const PlayerState& stateA() const { return stateA_; }
     const PlayerState& stateB() const { return stateB_; }
 
-    const Player* playerA() const { return playerA_; }
-    const Player* playerB() const { return playerB_; }
-
 private:
-    const Player* playerA_;
-    const Player* playerB_;
-
     PlayerState stateA_;
     PlayerState stateB_;
 

@@ -7,6 +7,7 @@ link_directories(external)
 add_library(jamesbond SHARED
     src/players/qlearner.cpp
     src/players/shapley.cpp
+    src/players/bilinear.cpp
     src/bilinearminmax.cpp
     src/gamearena.cpp
     src/gamestate.cpp

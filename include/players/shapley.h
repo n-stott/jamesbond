@@ -7,10 +7,10 @@
 
 struct GameGraph;
 
-class Shapley : public Player {
+class ShapleyPlayer : public Player {
 public:
-    static std::unique_ptr<Shapley> tryCreate(const Rules& rules, int seed = 0);
-    ~Shapley();
+    static std::unique_ptr<ShapleyPlayer> tryCreate(const Rules& rules, int seed = 0);
+    ~ShapleyPlayer();
     Action nextAction(const PlayerState& myState, const PlayerState& opponentState);
     void learnFromGame(const GameRecording& recording);
 
@@ -19,7 +19,7 @@ private:
     std::vector<StrategyPoint> meanPayoff_;
     Rand rand_;
 
-    explicit Shapley(const Rules& rules, int seed = 0);
+    explicit ShapleyPlayer(const Rules& rules, int seed = 0);
 };
 
 #endif

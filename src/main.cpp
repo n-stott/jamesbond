@@ -3,6 +3,7 @@
 #include "players/random.h"
 #include "players/biasedrandom.h"
 #include "players/qlearner.h"
+#include "players/bilinear.h"
 #include "players/shapley.h"
 #include "player.h"
 #include "fmt/core.h"
@@ -101,7 +102,7 @@ void testB() {
 
 void testC() {
     Rules rules;
-    auto s = Shapley::tryCreate(rules);
+    auto s = ShapleyPlayer::tryCreate(rules);
     assert(!!s);
     RandomPlayer b(rules, 0);
     auto q = createAndtrainQLearnerVsRandom(rules, 1);
@@ -136,16 +137,18 @@ void testD() {
     auto qlearner = QLearner::tryCreate(rules, 4);
     auto trainedQlearner = createAndtrainQLearnerVsRandom(rules, 5);
 
-    auto shapley = Shapley::tryCreate(rules, 6);
+    BilinearPlayer bilinear(rules, 6);
+    auto shapley = ShapleyPlayer::tryCreate(rules, 7);
 
     Tourney tourney;
-    tourney.addPlayer("pure random", &random);
-    tourney.addPlayer("random b/reload", &reloader);
-    tourney.addPlayer("random b/shield", &protective);
-    tourney.addPlayer("random b/shoot", &aggressive);
-    tourney.addPlayer("base qlearner", qlearner.get());
-    tourney.addPlayer("trained qlearner", trainedQlearner.get());
-    tourney.addPlayer("shapley", shapley.get());
+    tourney.addPlayer("[NS] pure random", &random);
+    tourney.addPlayer("[NS] random b/reload", &reloader);
+    tourney.addPlayer("[NS] random b/shield", &protective);
+    tourney.addPlayer("[NS] random b/shoot", &aggressive);
+    tourney.addPlayer("[NS] base qlearner", qlearner.get());
+    tourney.addPlayer("[NS] trained qlearner", trainedQlearner.get());
+    tourney.addPlayer("[NS] bilinear", &bilinear);
+    tourney.addPlayer("[NS] shapley", shapley.get());
 
     tourney.run();
 }

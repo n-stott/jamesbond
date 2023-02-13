@@ -75,18 +75,18 @@ struct StateComparator2 {
     }
 };
 
-static double playerStateValue(const PlayerState& s) {
-    return 6*6*s.lives() + 6*s.bullets() + s.remainingShields();
+static double playerStateValue(const Rules& rules, const PlayerState& s) {
+    return (rules.maxShields+1)*((rules.maxBullets+1)*s.lives() + s.bullets()) + s.remainingShields();
 }
 
 // The quantity to be minimized by A
-static double gameStateValue(const PlayerState& stateA, const PlayerState& stateB) {
-    return playerStateValue(stateA) - playerStateValue(stateB);
+static double gameStateValue(const Rules& rules, const PlayerState& stateA, const PlayerState& stateB) {
+    return playerStateValue(rules, stateB) - playerStateValue(rules, stateA);
 }
 
 // The quantity to be minimized by A
-static double gameStateValue(const GameState& s) {
-    return gameStateValue(s.stateA(), s.stateB());
+static double gameStateValue(const Rules& rules, const GameState& s) {
+    return gameStateValue(rules, s.stateA(), s.stateB());
 }
 
 static std::unique_ptr<GameGraph> make_graph(const Rules& rules) {
@@ -94,7 +94,7 @@ static std::unique_ptr<GameGraph> make_graph(const Rules& rules) {
 
     std::set<GameState, StateComparator> visitedStates;
     std::deque<GameState> stateQueue;
-    stateQueue.push_back(GameState{&graph.a, &graph.b});
+    stateQueue.push_back(GameState{});
     std::array<Action, 3> actions { Action::Reload, Action::Shield, Action::Shoot };
     while(!stateQueue.empty()) {
         GameState s = stateQueue.back();
@@ -124,7 +124,7 @@ static std::unique_ptr<GameGraph> make_graph(const Rules& rules) {
                 GameState t = s;
                 t.resolve(a, b, rules);
                 if(t.gameOver()) {
-                    const Player* winner = t.winner();
+                    const Player* winner = t.winner(&graph.a, &graph.b);
                     if(winner == &graph.a) {
                         edgeEntry = AWIN;
                         edgesCostEntry = -std::numeric_limits<double>::infinity();
@@ -142,12 +142,12 @@ static std::unique_ptr<GameGraph> make_graph(const Rules& rules) {
                         return {};
                     }
                     edgeEntry = std::distance(graph.states.begin(), it);
-                    edgesCostEntry = gameStateValue(t) - gameStateValue(s);
+                    edgesCostEntry = gameStateValue(rules, t) - gameStateValue(rules, s);
                 }
             }
         }
     }
-    GameState start(&graph.a, &graph.b);
+    GameState start;
     auto entry = std::lower_bound(graph.states.begin(), graph.states.end(), start, StateComparator{});
     if(entry == graph.states.end()) {
         fmt::print("No entrypoint in graph\n");
@@ -230,32 +230,29 @@ static std::vector<StrategyPoint> approximateMeanPayoff(const GameGraph& g) {
     return v;
 }
 
-std::unique_ptr<Shapley> Shapley::tryCreate(const Rules& rules, int seed) {
+std::unique_ptr<ShapleyPlayer> ShapleyPlayer::tryCreate(const Rules& rules, int seed) {
     if(rules.startLives > 5) return {};
     if(rules.maxBullets > 5) return {};
     if(rules.maxShields > 5) return {};
-    return std::unique_ptr<Shapley>(new Shapley(rules, seed));
+    return std::unique_ptr<ShapleyPlayer>(new ShapleyPlayer(rules, seed));
 }
 
-Shapley::Shapley(const Rules& rules, int seed) : Player(rules), rand_(seed) {
+ShapleyPlayer::ShapleyPlayer(const Rules& rules, int seed) : Player(rules), rand_(seed) {
     gameGraph_ = make_graph(rules_);
     if(!gameGraph_) return;
     meanPayoff_ = approximateMeanPayoff(*gameGraph_);
 }
 
-Shapley::~Shapley() = default;
+ShapleyPlayer::~ShapleyPlayer() = default;
 
-Action Shapley::nextAction(const PlayerState& stateA, const PlayerState& stateB) {
+Action ShapleyPlayer::nextAction(const PlayerState& stateA, const PlayerState& stateB) {
     std::pair<PlayerState, PlayerState> p { stateA, stateB };
     auto it = std::lower_bound(gameGraph_->states.begin(), gameGraph_->states.end(), p, StateComparator2{});
     size_t pos = std::distance(gameGraph_->states.begin(), it);
     const auto& payoff = meanPayoff_[pos];
-    // auto A = formCostMatrix(*gameGraph_, meanPayoff_, pos);
-    // printCostMatrix(A);
-    // fmt::print("{}/{} {}   Astrat={}/{}/{} Bstrat={}/{}/{}\n", pos, gameGraph_->states.size(), payoff.value, payoff.a.p[0], payoff.a.p[1], payoff.a.p[2], payoff.b.p[0], payoff.b.p[1], payoff.b.p[2]);
     return actionWithBias(rand_, payoff.p.p[0], payoff.p.p[1], payoff.p.p[2]);
 }
 
-void Shapley::learnFromGame(const GameRecording&) {
+void ShapleyPlayer::learnFromGame(const GameRecording&) {
 
 }

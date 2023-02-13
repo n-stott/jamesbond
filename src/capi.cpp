@@ -51,7 +51,7 @@ extern "C" {
                 break;
             }
             case JBPlayerType::SHAPLEY: {
-                p = Shapley::tryCreate(rules->rules, seed);
+                p = ShapleyPlayer::tryCreate(rules->rules, seed);
                 if(!p) return nullptr;
                 break;
             }
@@ -137,10 +137,7 @@ extern "C" {
         if(!(playerA->playerHandle->rules() == playerB->playerHandle->rules())) return JBError::INVALID_RULES;
         PlayerState sa = stateA->state;
         PlayerState sb = stateB->state;
-        GameState gs = GameState::from(playerA->playerHandle.get(),
-                                       playerB->playerHandle.get(),
-                                       sa,
-                                       sb);
+        GameState gs = GameState::from(sa, sb);
         const Rules& rules = playerA->playerHandle->rules();
         gs.resolve(fromJBAction(actionA), fromJBAction(actionB), rules);
         stateA->state = gs.stateA();

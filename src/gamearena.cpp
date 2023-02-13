@@ -5,12 +5,12 @@
 
 #define MAX_TURNS 100
 
-GameArena::GameArena() : state_(nullptr, nullptr) { }
+GameArena::GameArena() { }
 
 const Player* GameArena::play(Player* a, Player* b, GameRecording* recording) {
     if(!(a->rules() == b->rules())) return nullptr;
     const Rules& rules = a->rules();
-    state_ = GameState(a, b);
+    state_ = GameState{};
     int turns = 0;
     if(recording) recording->clear();
     while(!state_.gameOver() && turns < rules.maxTurns) {
@@ -20,7 +20,7 @@ const Player* GameArena::play(Player* a, Player* b, GameRecording* recording) {
         if(recording) recording->record(actionA, actionB);
         state_.resolve(actionA, actionB, rules);
     }
-	const Player* winner = state_.winner();
+	const Player* winner = state_.winner(a, b);
 	if(recording) recording->recordWinner(winner);
     return winner;
 }

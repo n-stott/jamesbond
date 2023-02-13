@@ -36,8 +36,10 @@ public:
     void run(int roundsPerMatch = 1000) {
         Params noLearning { false, false };
         std::vector<double> playerScores(players_.size(), 0);
+        size_t longestPlayerName = 0;
+        for(const auto& name : playerNames_) longestPlayerName = std::max(longestPlayerName, name.size());
         for(size_t i = 0; i < players_.size(); ++i) {
-            fmt::print("{:20}", playerNames_[i]);
+            fmt::print("{:{}}  ", playerNames_[i], (int)longestPlayerName);
             for(size_t j = 0; j < players_.size(); ++j) {
                 if(i == j) {
                     fmt::print("      ");
@@ -58,14 +60,16 @@ public:
             }
             fmt::print("\n");
         }
+        fmt::print("\n");
         std::vector<std::pair<double, std::string>> scoredPlayers;
         scoredPlayers.reserve(players_.size());
         for(size_t i = 0; i < players_.size(); ++i) {
             scoredPlayers.emplace_back(playerScores[i],playerNames_[i]);
         }
         std::sort(scoredPlayers.begin(), scoredPlayers.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+        fmt::print("Ranked by score:\n");
         for(const auto& sp : scoredPlayers) {
-            fmt::print("{:20} : {:8}\n", sp.second, sp.first);
+            fmt::print("{:{}} : {:8}\n", sp.second, longestPlayerName, sp.first);
         }
     }
 
