@@ -19,6 +19,7 @@ struct CombinedStrategyPoint {
 class BilinearMinMax {
 private:
     static StrategyPoint solveBetter(const std::array<std::array<double, 3>, 3>& A);
+    static StrategyPoint solveFast(const std::array<std::array<double, 3>, 3>& A);
 public:
     static StrategyPoint solve(const std::array<std::array<double, 3>, 3>& A);
 };

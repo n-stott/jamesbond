@@ -57,7 +57,7 @@ void testA() {
 
 std::unique_ptr<QLearner> createAndtrainQLearnerVsRandom(const Rules& rules, int seed) {
     std::unique_ptr<Player> r = std::make_unique<RandomPlayer>(rules, seed);
-    std::unique_ptr<QLearner> q = QLearner::tryCreate(rules, seed);
+    std::unique_ptr<QLearner> q = QLearner::tryCreate(rules, 421*seed+1);
     Tourney::Params semiB{false, true};
     Tourney::play2v2(100000, r.get(), q.get(), semiB);
     return q;
@@ -150,7 +150,7 @@ void testD() {
     tourney.addPlayer("[NS] bilinear", &bilinear);
     tourney.addPlayer("[NS] shapley", shapley.get());
 
-    tourney.run();
+    tourney.run(1000);
 }
 
 int main() {

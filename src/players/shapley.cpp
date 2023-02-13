@@ -110,7 +110,7 @@ static std::unique_ptr<GameGraph> make_graph(const Rules& rules) {
             }
         }
     }
-    fmt::print("Game has {} non-terminal states\n", visitedStates.size());
+    // fmt::print("Game has {} non-terminal states\n", visitedStates.size());
 
     graph.states.insert(graph.states.begin(), visitedStates.begin(), visitedStates.end());
     std::sort(graph.states.begin(), graph.states.end(), StateComparator{});
@@ -150,7 +150,7 @@ static std::unique_ptr<GameGraph> make_graph(const Rules& rules) {
     GameState start;
     auto entry = std::lower_bound(graph.states.begin(), graph.states.end(), start, StateComparator{});
     if(entry == graph.states.end()) {
-        fmt::print("No entrypoint in graph\n");
+        // fmt::print("No entrypoint in graph\n");
         return {};
     }
     graph.entrypoint = std::distance(graph.states.begin(), entry);
@@ -212,16 +212,16 @@ static std::vector<StrategyPoint> approximateMeanPayoff(const GameGraph& g) {
             auto solution = BilinearMinMax::solve(A);
             vNext[i] = solution;
         }
-        size_t diffSize = 0;
-        size_t diffInf = 0;
-        size_t finiteMagn = 0;
-        for(size_t i = 0; i < v.size(); ++i) {
-            diffSize += (ssize_t)(v[i].value - vNext[i].value) != 0;
-            diffInf += (std::isinf(vNext[i].value) != std::isinf(v[i].value));
-            if(!std::isinf(vNext[i].value) && !std::isinf(v[i].value)) finiteMagn += std::abs(vNext[i].value - v[i].value);
-        }
-        double d = distance(v, vNext);
-        fmt::print("Iter #{:4}  DiffNz={} DiffInfNz={} diffMagn={} |v-v+|={}\n", iter, diffSize, diffInf, finiteMagn, d);
+        // size_t diffSize = 0;
+        // size_t diffInf = 0;
+        // size_t finiteMagn = 0;
+        // for(size_t i = 0; i < v.size(); ++i) {
+        //     diffSize += (ssize_t)(v[i].value - vNext[i].value) != 0;
+        //     diffInf += (std::isinf(vNext[i].value) != std::isinf(v[i].value));
+        //     if(!std::isinf(vNext[i].value) && !std::isinf(v[i].value)) finiteMagn += std::abs(vNext[i].value - v[i].value);
+        // }
+        // double d = distance(v, vNext);
+        // fmt::print("Iter #{:4}  DiffNz={} DiffInfNz={} diffMagn={} |v-v+|={}\n", iter, diffSize, diffInf, finiteMagn, d);
         v.swap(vNext);
     }
 

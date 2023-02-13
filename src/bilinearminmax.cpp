@@ -1,7 +1,10 @@
 #include "bilinearminmax.h"
+#include "fmt/core.h"
 #include "glpk.h"
 #include <algorithm>
+#include <cassert>
 #include <limits>
+#include <vector>
 
 
 
@@ -41,6 +44,30 @@ struct SimplexSolver {
 
 static SimplexSolver ss;
 
+
+[[maybe_unused]] static inline void printCostMatrix(const std::array<std::array<double, 3>, 3>& A) {
+    fmt::print("{:6} {:6} {:6}\n", A[0][0], A[0][1], A[0][2]);
+    fmt::print("{:6} {:6} {:6}\n", A[1][0], A[1][1], A[1][2]);
+    fmt::print("{:6} {:6} {:6}\n", A[2][0], A[2][1], A[2][2]);
+}
+
+static double evalCandidate(const std::array<std::array<double, 3>, 3>& A, const Point& p) {
+    if(p.p[0] != p.p[0] || p.p[0] <= -0.0000001 || p.p[0] >= 1.0000001) return std::numeric_limits<double>::infinity();
+    if(p.p[1] != p.p[1] || p.p[1] <= -0.0000001 || p.p[1] >= 1.0000001) return std::numeric_limits<double>::infinity();
+    if(p.p[2] != p.p[2] || p.p[2] <= -0.0000001 || p.p[2] >= 1.0000001) return std::numeric_limits<double>::infinity();
+    if(p.p[0] + p.p[1] + p.p[2] >= 1.0000001) return std::numeric_limits<double>::infinity();
+    if(p.p[0] + p.p[1] + p.p[2] <= 1-0.0000001) return std::numeric_limits<double>::infinity();
+    double value = -std::numeric_limits<double>::infinity();
+    for(int j = 0; j < 3; ++j) {
+        double v = 0;
+        for(int i = 0; i < 3; ++i) {
+            v += A[i][j] * p.p[i];
+        }
+        value = std::max(value, v);
+    }
+    return value;
+};
+
 StrategyPoint BilinearMinMax::solveBetter(const std::array<std::array<double, 3>, 3>& A) {
     int ia[1+15], ja[1+15];
     double ar[1+15];
@@ -61,13 +88,97 @@ StrategyPoint BilinearMinMax::solveBetter(const std::array<std::array<double, 3>
     ia[15] = 4, ja[15] = 3, ar[15] = 1.0;
     glp_load_matrix(ss.lp, 15, ia, ja, ar);
     glp_term_out(GLP_OFF);
+    glp_std_basis(ss.lp);
     glp_simplex(ss.lp, &ss.parm);
     double z = glp_get_obj_val(ss.lp);
     double x1 = glp_get_col_prim(ss.lp, 1);
     double x2 = glp_get_col_prim(ss.lp, 2);
     double x3 = glp_get_col_prim(ss.lp, 3);
-    
-    return StrategyPoint { z, Point{x1, x2, x3} };
+
+    Point p{x1, x2, x3};
+    return StrategyPoint { z, p };
+}
+
+double det(double mat[3][3]) {
+    double ans = mat[0][0] * (mat[1][1] * mat[2][2] - mat[2][1] * mat[1][2])
+                - mat[0][1] * (mat[1][0] * mat[2][2] - mat[1][2] * mat[2][0])
+                + mat[0][2] * (mat[1][0] * mat[2][1] - mat[1][1] * mat[2][0]);
+    return ans;
+}
+
+std::array<double, 3> solve3x3(const std::array<std::array<double, 3>, 3>& A, const std::array<double, 3>& b) {
+    double d[3][3] = {
+        { A[0][0], A[0][1], A[0][2] },
+        { A[1][0], A[1][1], A[1][2] },
+        { A[2][0], A[2][1], A[2][2] },
+    };
+    double d1[3][3] = {
+        { b[0], A[0][1], A[0][2] },
+        { b[1], A[1][1], A[1][2] },
+        { b[2], A[2][1], A[2][2] },
+    };
+    double d2[3][3] = {
+        { A[0][0], b[0], A[0][2] },
+        { A[1][0], b[1], A[1][2] },
+        { A[2][0], b[2], A[2][2] },
+    };
+    double d3[3][3] = {
+        { A[0][0], A[0][1], b[0] },
+        { A[1][0], A[1][1], b[1] },
+        { A[2][0], A[2][1], b[2] },
+    };
+ 
+    double D = det(d);
+    double D1 = det(d1);
+    double D2 = det(d2);
+    double D3 = det(d3);
+ 
+    if (D != 0) {
+        double x = D1 / D;
+        double y = D2 / D;
+        double z = D3 / D;
+        return std::array<double, 3>{x, y, z};
+    } else {
+        return std::array<double, 3>{0, 0, 0};
+    }
+}
+
+StrategyPoint BilinearMinMax::solveFast(const std::array<std::array<double, 3>, 3>& A) {
+    std::vector<Point> candidates;
+
+    candidates.push_back(Point{ (A[1][1]-A[1][0])/(A[1][1]-A[1][0]+A[0][0]-A[0][1]), (A[0][0]-A[0][1])/(A[1][1]-A[1][0]+A[0][0]-A[0][1]), 0 });
+    candidates.push_back(Point{ (A[1][2]-A[1][0])/(A[1][2]-A[1][0]+A[0][0]-A[0][2]), (A[0][0]-A[0][2])/(A[1][2]-A[1][0]+A[0][0]-A[0][2]), 0 });
+    candidates.push_back(Point{ (A[1][1]-A[1][2])/(A[1][1]-A[1][2]+A[0][2]-A[0][1]), (A[0][2]-A[0][1])/(A[1][1]-A[1][2]+A[0][2]-A[0][1]), 0 });
+
+    candidates.push_back(Point{ (A[2][1]-A[2][0])/(A[2][1]-A[2][0]+A[0][0]-A[0][1]), 0, (A[0][0]-A[0][1])/(A[2][1]-A[2][0]+A[0][0]-A[0][1]) });
+    candidates.push_back(Point{ (A[2][2]-A[2][0])/(A[2][2]-A[2][0]+A[0][0]-A[0][2]), 0, (A[0][0]-A[0][2])/(A[2][2]-A[2][0]+A[0][0]-A[0][2]) });
+    candidates.push_back(Point{ (A[2][1]-A[2][2])/(A[2][1]-A[2][2]+A[0][2]-A[0][1]), 0, (A[0][2]-A[0][1])/(A[2][1]-A[2][2]+A[0][2]-A[0][1]) });
+
+    candidates.push_back(Point{ 0, (A[2][0]-A[2][1])/(A[1][1]-A[1][0]+A[2][0]-A[2][1]), (A[1][1]-A[1][0])/(A[1][1]-A[1][0]+A[2][0]-A[2][1]) });
+    candidates.push_back(Point{ 0, (A[2][0]-A[2][2])/(A[1][2]-A[1][0]+A[2][0]-A[2][2]), (A[1][2]-A[1][0])/(A[1][2]-A[1][0]+A[2][0]-A[2][2]) });
+    candidates.push_back(Point{ 0, (A[2][2]-A[2][1])/(A[1][1]-A[1][2]+A[2][2]-A[2][1]), (A[1][1]-A[1][2])/(A[1][1]-A[1][2]+A[2][2]-A[2][1]) });
+
+    std::array<std::array<double, 3>, 3> M {{
+        { A[0][0] - A[0][1], A[1][0] - A[1][1], A[2][0] - A[2][1] },
+        { A[0][1] - A[0][2], A[1][1] - A[1][2], A[2][1] - A[2][2] },
+        { 1, 1, 1 }
+    }};
+    std::array<double, 3> b {{ 0, 0, 1 }};
+    auto s = solve3x3(M, b);
+    candidates.push_back(Point{s[0], s[1], s[2]});
+
+    Point bestPoint {0, 0, 0};
+    double bestValue = std::numeric_limits<double>::infinity();
+
+    for(const auto& p : candidates) {
+        double value = evalCandidate(A, p);
+        if(value < bestValue) {
+            bestValue = value;
+            bestPoint = p;
+        }
+    }
+   
+    return StrategyPoint { bestValue, bestPoint };
 }
 
 StrategyPoint BilinearMinMax::solve(const std::array<std::array<double, 3>, 3>& A) {
@@ -83,7 +194,10 @@ StrategyPoint BilinearMinMax::solve(const std::array<std::array<double, 3>, 3>& 
     auto minValueIt = std::max_element(minByCol.begin(), minByCol.end());
     auto maxValueIt = std::min_element(maxByRow.begin(), maxByRow.end());
     if(*maxValueIt != *minValueIt) {
-        return solveBetter(A);
+        auto f = solveFast(A);
+        return f;
+        // auto b = solveBetter(A);
+        // return b;
     }
     Point a {0, 0, 0};
     a.p[std::distance(maxByRow.begin(), maxValueIt)] = 1;
